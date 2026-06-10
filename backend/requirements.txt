@@ -1,0 +1,15 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+python-jose[cryptography]
+passlib[bcrypt]
+bcrypt==4.0.1
+python-multipart
+scikit-learn
+pandas
+numpy
+requests
+python-dotenv
+pydantic-settings
+email-validator
+joblib

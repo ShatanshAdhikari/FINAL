@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>GetFit — Gantt Chart</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 9pt;
+      background: #fff;
+      color: #111;
+      padding: 20px;
+    }
+
+    h1 { font-size: 13pt; font-weight: bold; margin-bottom: 2px; }
+    .sub { font-size: 8pt; color: #555; margin-bottom: 10px; }
+
+    .legend {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    .leg { display: flex; align-items: center; gap: 5px; font-size: 8pt; }
+    .leg-box { width: 12px; height: 12px; border-radius: 2px; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+
+    th, td {
+      border: 1px solid #bbb;
+      text-align: center;
+      vertical-align: middle;
+      padding: 4px 2px;
+      font-size: 8pt;
+    }
+
+    th { background: #f0f0f0; font-weight: bold; }
+
+    td.task-name {
+      text-align: left;
+      padding-left: 8px;
+      font-size: 8pt;
+      white-space: nowrap;
+    }
+
+    tr.sprint-hdr td {
+      font-weight: bold;
+      font-size: 8pt;
+      text-align: left;
+      padding-left: 8px;
+      border-top: 2px solid #888;
+    }
+
+    .print-btn {
+      margin-bottom: 14px;
+      padding: 6px 16px;
+      background: #333;
+      color: #fff;
+      font-size: 10pt;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    @media print {
+      .print-btn { display: none; }
+      @page { size: A4 landscape; margin: 10mm; }
+      body { padding: 0; }
+    }
+  </style>
+</head>
+<body>
+
+<button class="print-btn" onclick="window.print()">Print / Save as PDF</button>
+
+<h1>GetFit — Project Gantt Chart</h1>
+<p class="sub">Methodology: Scrum (Agile) &nbsp;|&nbsp; 5 Sprints &nbsp;|&nbsp; 10 Weeks &nbsp;|&nbsp; Sprint Length: 2 Weeks</p>
+
+<div class="legend">
+  <div class="leg"><div class="leg-box" style="background:#e57373"></div>Sprint 1 — Foundation (Must Have)</div>
+  <div class="leg"><div class="leg-box" style="background:#ffb74d"></div>Sprint 2 — Nutrition Tracker (Must Have)</div>
+  <div class="leg"><div class="leg-box" style="background:#fff176"></div>Sprint 3 — Workout Features (Must Have)</div>
+  <div class="leg"><div class="leg-box" style="background:#64b5f6"></div>Sprint 4 — Step Tracker + Dashboard (Should Have)</div>
+  <div class="leg"><div class="leg-box" style="background:#81c784"></div>Sprint 5 — Admin Panel + Polish (Nice to Have)</div>
+</div>
+
+<table>
+  <colgroup>
+    <col style="width:150px" />
+    <col /><col /><col /><col />
+    <col /><col /><col /><col />
+    <col /><col />
+  </colgroup>
+  <thead>
+    <tr>
+      <th style="text-align:left; padding-left:8px;">Task</th>
+      <th>Wk 1</th><th>Wk 2</th><th>Wk 3</th><th>Wk 4</th>
+      <th>Wk 5</th><th>Wk 6</th><th>Wk 7</th><th>Wk 8</th>
+      <th>Wk 9</th><th>Wk 10</th>
+    </tr>
+  </thead>
+  <tbody>
+
+    <!-- Sprint 1 -->
+    <tr class="sprint-hdr"><td colspan="11" style="background:#ffebee; color:#b71c1c;">Sprint 1 — Foundation (Weeks 1–2)</td></tr>
+    <tr>
+      <td class="task-name">User Registration</td>
+      <td style="background:#e57373"></td><td></td><td></td><td></td>
+      <td></td><td></td><td></td><td></td><td></td><td></td>
+    </tr>
+    <tr style="background:#fafafa">
+      <td class="task-name">User Login (JWT Tokens)</td>
+      <td style="background:#e57373"></td><td style="background:#e57373"></td><td></td><td></td>
+      <td></td><td></td><td></td><td></td><td></td><td></td>
+    </tr>
+    <tr>
+      <td class="task-name">Onboarding Flow</td>
+      <td></td><td style="background:#e57373"></td><td></td><td></td>
+      <td></td><td></td><td></td><td></td><td></td><td></td>
+    </tr>
+    <tr style="background:#fafafa">
+      <td class="task-name">Update Profile Page</td>
+      <td></td><td style="background:#e57373"></td><td></td><td></td>
+      <td></td><td></td><td></td><td></td><td></td><td></td>
+    </tr>
+
+    <!-- Sprint 2 -->
+    <tr class="sprint-hdr"><td colspan="11" style="background:#fff3e0; color:#bf360c;">Sprint 2 — Nutrition Tracker (Weeks 3–4)</td></tr>
+    <tr>
+      <td class="task-name">Search Food (Nutritionix)</td>
+      <td></td><td></td><td style="background:#ffb74d"></td><td></td>
+      <td></td><td></td><td></td><td></td><td></td><td></td>
+    </tr>
+    <tr style="background:#fafafa">
+      <td class="task-name">Log a Meal</td>
+      <td></td><td></td><td style="background:#ffb74d"></td><td></td>
+      <td></td><td></td><td></td><td></td><td></td><td></td>
+    </tr>
+    <tr>
+      <td class="task-name">Calorie &amp; Macro Summary</td>
+      <td></td><td></td><td style="background:#ffb74d"></td><td style="background:#ffb74d"></td>
+      <td></td><td></td><td></td><td></td><td></td><td></td>
+    </tr>
+    <tr style="background:#fafafa">
+      <td class="task-name">Nutrition History (7 days)</td>
+      <td></td><td></td><td></td><td style="background:#ffb74d"></td>
+      <td></td><td></td><td></td><td></td><td></td><td></td>
+    </tr>
+    <tr>
+      <td class="task-name">Delete a Food Log</td>
+      <td></td><td></td><td></td><td style="background:#ffb74d"></td>
+      <td></td><td></td><td></td><td></td><td></td><td></td>
+    </tr>
+
+    <!-- Sprint 3 -->
+    <tr class="sprint-hdr"><td colspan="11" style="background:#fffde7; color:#f57f17;">Sprint 3 — Workout Features (Weeks 5–6)</td></tr>
+    <tr>
+      <td class="task-name">Generate Workout Plan</td>
+      <td></td><td></td><td></td><td></td>
+      <td style="background:#fff176"></td><td></td><td></td><td></td><td></td><td></td>
+    </tr>
+    <tr style="background:#fafafa">
+      <td class="task-name">Log a Workout Session</td>
+      <td></td><td></td><td></td><td></td>
+      <td style="background:#fff176"></td><td style="background:#fff176"></td><td></td><td></td><td></td><td></td>
+    </tr>
+    <tr>
+      <td class="task-name">Predict Calories (ML Model)</td>
+      <td></td><td></td><td></td><td></td>
+      <td></td><td style="background:#fff176"></td><td></td><td></td><td></td><td></td>
+    </tr>
+    <tr style="background:#fafafa">
+      <td class="task-name">View Workout History</td>
+      <td></td><td></td><td></td><td></td>
+      <td></td><td style="background:#fff176"></td><td></td><td></td><td></td><td></td>
+    </tr>
+
+    <!-- Sprint 4 -->
+    <tr class="sprint-hdr"><td colspan="11" style="background:#e3f2fd; color:#0d47a1;">Sprint 4 — Step Tracker + Dashboard (Weeks 7–8)</td></tr>
+    <tr>
+      <td class="task-name">Log Daily Steps</td>
+      <td></td><td></td><td></td><td></td>
+      <td></td><td></td><td style="background:#64b5f6"></td><td></td><td></td><td></td>
+    </tr>
+    <tr style="background:#fafafa">
+      <td class="task-name">Calories Burned from Steps</td>
+      <td></td><td></td><td></td><td></td>
+      <td></td><td></td><td style="background:#64b5f6"></td><td></td><td></td><td></td>
+    </tr>
+    <tr>
+      <td class="task-name">Step History (7 days)</td>
+      <td></td><td></td><td></td><td></td>
+      <td></td><td></td><td style="background:#64b5f6"></td><td style="background:#64b5f6"></td><td></td><td></td>
+    </tr>
+    <tr style="background:#fafafa">
+      <td class="task-name">Dashboard &amp; Summary Charts</td>
+      <td></td><td></td><td></td><td></td>
+      <td></td><td></td><td></td><td style="background:#64b5f6"></td><td></td><td></td>
+    </tr>
+
+    <!-- Sprint 5 -->
+    <tr class="sprint-hdr"><td colspan="11" style="background:#e8f5e9; color:#1b5e20;">Sprint 5 — Admin Panel + Polish (Weeks 9–10)</td></tr>
+    <tr>
+      <td class="task-name">Admin: View All Users</td>
+      <td></td><td></td><td></td><td></td>
+      <td></td><td></td><td></td><td></td><td style="background:#81c784"></td><td></td>
+    </tr>
+    <tr style="background:#fafafa">
+      <td class="task-name">Admin: Activate / Deactivate</td>
+      <td></td><td></td><td></td><td></td>
+      <td></td><td></td><td></td><td></td><td style="background:#81c784"></td><td></td>
+    </tr>
+    <tr>
+      <td class="task-name">Admin: Delete Users</td>
+      <td></td><td></td><td></td><td></td>
+      <td></td><td></td><td></td><td></td><td style="background:#81c784"></td><td></td>
+    </tr>
+    <tr style="background:#fafafa">
+      <td class="task-name">Super Admin: Manage Roles</td>
+      <td></td><td></td><td></td><td></td>
+      <td></td><td></td><td></td><td></td><td style="background:#81c784"></td><td style="background:#81c784"></td>
+    </tr>
+    <tr>
+      <td class="task-name">Platform Stats</td>
+      <td></td><td></td><td></td><td></td>
+      <td></td><td></td><td></td><td></td><td></td><td style="background:#81c784"></td>
+    </tr>
+    <tr style="background:#fafafa">
+      <td class="task-name">Bug Fixes &amp; UI Polish</td>
+      <td></td><td></td><td></td><td></td>
+      <td></td><td></td><td></td><td></td><td></td><td style="background:#81c784"></td>
+    </tr>
+
+  </tbody>
+</table>
+
+</body>
+</html>

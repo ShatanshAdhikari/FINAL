@@ -1,0 +1,83 @@
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import toast from 'react-hot-toast';
+import { Dumbbell } from 'lucide-react';
+
+export default function Login() {
+  const [form, setForm] = useState({ username: '', password: '' });
+  const [loading, setLoading] = useState(false);
+  const { login } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await login(form.username, form.password);
+      toast.success('Welcome back! 💪');
+      navigate('/dashboard');
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Login failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#0f0f0f] flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-500 to-red-600 mb-4">
+            <Dumbbell size={32} className="text-white" />
+          </div>
+          <h1 className="text-3xl font-bold text-white">GetFit</h1>
+          <p className="text-gray-400 mt-1">Your personal fitness companion</p>
+        </div>
+
+        {/* Form */}
+        <div className="bg-[#111118] rounded-2xl border border-[#222] p-8">
+          <h2 className="text-xl font-semibold text-white mb-6">Sign In</h2>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">Email or Username</label>
+              <input
+                type="text"
+                value={form.username}
+                onChange={(e) => setForm({ ...form, username: e.target.value })}
+                className="w-full bg-[#1a1a24] border border-[#333] rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-orange-500 transition-colors"
+                placeholder="Enter your email or username"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">Password</label>
+              <input
+                type="password"
+                value={form.password}
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                className="w-full bg-[#1a1a24] border border-[#333] rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-orange-500 transition-colors"
+                placeholder="Enter your password"
+                required
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-gradient-to-r from-orange-500 to-red-600 text-white font-semibold py-3 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 mt-2"
+            >
+              {loading ? 'Signing in...' : 'Sign In'}
+            </button>
+          </form>
+          <p className="text-center text-gray-400 text-sm mt-6">
+            Don't have an account?{' '}
+            <Link to="/register" className="text-orange-400 hover:text-orange-300 font-medium">
+              Create one
+            </Link>
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
