@@ -1,48 +1,17 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { Dumbbell, Zap, Clock, ChevronDown, ChevronUp, Activity } from 'lucide-react';
 
-export default function WorkoutPlan() {
-  const { user } = useAuth();
-  const [plan, setPlan] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [expandedDay, setExpandedDay] = useState(null);
-
-  // Calorie predictor
+function CaloriePredictor({ user }) {
   const [predForm, setPredForm] = useState({ duration_minutes: '', heart_rate: '' });
   const [prediction, setPrediction] = useState(null);
   const [predLoading, setPredLoading] = useState(false);
 
-  // Workout log
-  const [logForm, setLogForm] = useState({ exercise_name: '', duration_minutes: '', heart_rate: '', calories_burned: '' });
-  const [logs, setLogs] = useState([]);
-
-  useEffect(() => {
-    fetchPlan();
-    fetchLogs();
-  }, []);
-
-  const fetchPlan = async () => {
-    try {
-      const res = await api.get('/workout/plan');
-      setPlan(res.data);
-      setExpandedDay(Object.keys(res.data.weekly_plan)[0]);
-    } catch (e) {
-      toast.error('Complete your profile to get a workout plan');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchLogs = async () => {
-    try {
-      const res = await api.get('/workout/logs');
-      setLogs(res.data);
-    } catch (e) {}
-  };
+  const missingFields = ['gender', 'age', 'weight', 'height'].filter(f => !user?.[f]);
+  const canPredict = missingFields.length === 0;
 
   const predictCalories = async () => {
     if (!predForm.duration_minutes || !predForm.heart_rate) {
@@ -63,6 +32,105 @@ export default function WorkoutPlan() {
     }
   };
 
+  return (
+    <div className="bg-[#111118] rounded-2xl border border-[#222] p-6">
+      <h2 className="text-white font-semibold mb-1 flex items-center gap-2">
+        <Zap size={18} className="text-yellow-400" /> Calorie Burn Predictor (ML Model)
+      </h2>
+      <p className="text-gray-400 text-xs mb-4">Uses Lasso Regression (degree 3) to predict calories burned based on heart rate</p>
+
+      {!canPredict && (
+        <div className="mb-4 flex items-start gap-3 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-xl">
+          <Zap size={16} className="text-yellow-400 mt-0.5 shrink-0" />
+          <div className="text-xs">
+            <span className="text-yellow-400 font-medium">Profile incomplete. </span>
+            <span className="text-gray-400">
+              Missing: <span className="text-white">{missingFields.join(', ')}</span>.{' '}
+            </span>
+            <Link to="/profile" className="text-yellow-400 underline hover:text-yellow-300">
+              Update profile →
+            </Link>
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <label className="block text-xs text-gray-400 mb-1">Duration (min)</label>
+          <input
+            type="number"
+            value={predForm.duration_minutes}
+            onChange={(e) => setPredForm({ ...predForm, duration_minutes: e.target.value })}
+            className="w-full bg-[#1a1a24] border border-[#333] rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-yellow-500 disabled:opacity-40"
+            placeholder="30"
+            disabled={!canPredict}
+          />
+        </div>
+        <div>
+          <label className="block text-xs text-gray-400 mb-1">Avg Heart Rate (BPM)</label>
+          <input
+            type="number"
+            value={predForm.heart_rate}
+            onChange={(e) => setPredForm({ ...predForm, heart_rate: e.target.value })}
+            className="w-full bg-[#1a1a24] border border-[#333] rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-yellow-500 disabled:opacity-40"
+            placeholder="140"
+            disabled={!canPredict}
+          />
+        </div>
+        <div className="flex items-end">
+          <button
+            onClick={predictCalories}
+            disabled={predLoading || !canPredict}
+            className="w-full py-2 bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 rounded-xl text-sm font-medium hover:bg-yellow-500/30 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {predLoading ? 'Predicting...' : 'Predict'}
+          </button>
+        </div>
+      </div>
+
+      {prediction !== null && (
+        <div className="mt-4 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl">
+          <div className="text-yellow-400 font-bold text-2xl">{Math.round(prediction)} kcal</div>
+          <div className="text-gray-400 text-xs mt-1">Estimated calories burned</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function WorkoutPlan() {
+  const { user } = useAuth();
+  const [plan, setPlan] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [expandedDay, setExpandedDay] = useState(null);
+
+  const [logForm, setLogForm] = useState({ exercise_name: '', duration_minutes: '', heart_rate: '', calories_burned: '' });
+  const [logs, setLogs] = useState([]);
+
+  const fetchPlan = useCallback(async () => {
+    try {
+      const res = await api.get('/workout/plan');
+      setPlan(res.data);
+      setExpandedDay(Object.keys(res.data.weekly_plan)[0]);
+    } catch {
+      toast.error('Complete your profile to get a workout plan');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const fetchLogs = useCallback(async () => {
+    try {
+      const res = await api.get('/workout/logs');
+      setLogs(res.data);
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    void fetchPlan();
+    void fetchLogs();
+  }, [fetchPlan, fetchLogs]);
+
   const logWorkout = async () => {
     if (!logForm.exercise_name || !logForm.duration_minutes) {
       toast.error('Exercise name and duration are required');
@@ -77,8 +145,8 @@ export default function WorkoutPlan() {
       });
       toast.success('Workout logged! 💪');
       setLogForm({ exercise_name: '', duration_minutes: '', heart_rate: '', calories_burned: '' });
-      fetchLogs();
-    } catch (e) {
+      void fetchLogs();
+    } catch {
       toast.error('Failed to log workout');
     }
   };
@@ -100,9 +168,9 @@ export default function WorkoutPlan() {
       </div>
 
       {plan && (
-        <div className="grid grid-cols-3 md:grid-cols-3 gap-3 mb-2">
+        <div className="grid grid-cols-3 gap-3 mb-2">
           {[
-            { label: 'Goal', value: plan.goal.replace('_', ' ').toUpperCase() },
+            { label: 'Goal', value: plan.goal.replace(/_/g, ' ').toUpperCase() },
             { label: 'Level', value: plan.fitness_level.charAt(0).toUpperCase() + plan.fitness_level.slice(1) },
             { label: 'Days/Week', value: plan.days_per_week },
           ].map(s => (
@@ -114,7 +182,6 @@ export default function WorkoutPlan() {
         </div>
       )}
 
-      {/* Weekly Plan */}
       {plan ? (
         <div className="bg-[#111118] rounded-2xl border border-[#222] p-6">
           <h2 className="text-white font-semibold mb-4 flex items-center gap-2">
@@ -166,78 +233,8 @@ export default function WorkoutPlan() {
         </div>
       )}
 
-      {/* Calorie Predictor */}
-      {(() => {
-        const missingFields = ['gender', 'age', 'weight', 'height'].filter(f => !user?.[f]);
-        const canPredict = missingFields.length === 0;
-        return (
-          <div className="bg-[#111118] rounded-2xl border border-[#222] p-6">
-            <h2 className="text-white font-semibold mb-1 flex items-center gap-2">
-              <Zap size={18} className="text-yellow-400" /> Calorie Burn Predictor (ML Model)
-            </h2>
-            <p className="text-gray-400 text-xs mb-4">Uses Lasso Regression (degree 3) to predict calories burned based on heart rate</p>
+      <CaloriePredictor user={user} />
 
-            {/* Profile incomplete warning */}
-            {!canPredict && (
-              <div className="mb-4 flex items-start gap-3 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-xl">
-                <Zap size={16} className="text-yellow-400 mt-0.5 shrink-0" />
-                <div className="text-xs">
-                  <span className="text-yellow-400 font-medium">Profile incomplete. </span>
-                  <span className="text-gray-400">
-                    Missing: <span className="text-white">{missingFields.join(', ')}</span>.{' '}
-                  </span>
-                  <Link to="/profile" className="text-yellow-400 underline hover:text-yellow-300">
-                    Update profile →
-                  </Link>
-                </div>
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-xs text-gray-400 mb-1">Duration (min)</label>
-                <input
-                  type="number"
-                  value={predForm.duration_minutes}
-                  onChange={(e) => setPredForm({ ...predForm, duration_minutes: e.target.value })}
-                  className="w-full bg-[#1a1a24] border border-[#333] rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-yellow-500 disabled:opacity-40"
-                  placeholder="30"
-                  disabled={!canPredict}
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-400 mb-1">Avg Heart Rate (BPM)</label>
-                <input
-                  type="number"
-                  value={predForm.heart_rate}
-                  onChange={(e) => setPredForm({ ...predForm, heart_rate: e.target.value })}
-                  className="w-full bg-[#1a1a24] border border-[#333] rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-yellow-500 disabled:opacity-40"
-                  placeholder="140"
-                  disabled={!canPredict}
-                />
-              </div>
-              <div className="flex items-end">
-                <button
-                  onClick={predictCalories}
-                  disabled={predLoading || !canPredict}
-                  className="w-full py-2 bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 rounded-xl text-sm font-medium hover:bg-yellow-500/30 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  {predLoading ? 'Predicting...' : 'Predict'}
-                </button>
-              </div>
-            </div>
-
-            {prediction !== null && (
-              <div className="mt-4 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl">
-                <div className="text-yellow-400 font-bold text-2xl">{Math.round(prediction)} kcal</div>
-                <div className="text-gray-400 text-xs mt-1">Estimated calories burned</div>
-              </div>
-            )}
-          </div>
-        );
-      })()}
-
-      {/* Log Workout */}
       <div className="bg-[#111118] rounded-2xl border border-[#222] p-6">
         <h2 className="text-white font-semibold mb-4 flex items-center gap-2">
           <Activity size={18} className="text-green-400" /> Log Workout

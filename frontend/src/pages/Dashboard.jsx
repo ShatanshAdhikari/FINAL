@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
 import { Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import {
-  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell
+  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, LineChart, Line,
 } from 'recharts';
-import { Flame, Footprints, Dumbbell, Target, TrendingUp, Apple } from 'lucide-react';
+import { Flame, Footprints, Dumbbell, Target, TrendingUp, Apple, Scale } from 'lucide-react';
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -13,26 +15,62 @@ export default function Dashboard() {
   const [todayCalories, setTodayCalories] = useState(null);
   const [stepData, setStepData] = useState(null);
   const [calorieHistory, setCalorieHistory] = useState([]);
+  const [weightHistory, setWeightHistory] = useState([]);
+  const [weightInput, setWeightInput] = useState('');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [plan, today, steps, history] = await Promise.allSettled([
+        const [plan, today, steps, history, weights] = await Promise.allSettled([
           api.get('/profile/nutrition-plan'),
           api.get('/nutrition/logs/today'),
           api.get('/steps/today'),
           api.get('/nutrition/logs/history?days=7'),
+          api.get('/profile/weight-history?days=90'),
         ]);
         if (plan.status === 'fulfilled') setNutritionPlan(plan.value.data);
         if (today.status === 'fulfilled') setTodayCalories(today.value.data);
         if (steps.status === 'fulfilled') setStepData(steps.value.data);
         if (history.status === 'fulfilled') setCalorieHistory(history.value.data);
-      } catch (e) {}
+        if (weights.status === 'fulfilled') setWeightHistory(weights.value.data);
+
+        const anySuccess = [plan, today, steps, history, weights].some(r => r.status === 'fulfilled');
+        if (!anySuccess) setError(true);
+      } catch {
+        setError(true);
+      }
       setLoading(false);
     };
-    fetchData();
+    void fetchData();
   }, []);
+
+  const logWeight = async () => {
+    const w = parseFloat(weightInput);
+    if (!w || w <= 0) return toast.error('Enter a valid weight');
+    try {
+      await api.post('/profile/weight', { weight: w });
+      toast.success('Weight logged!');
+      setWeightInput('');
+      const res = await api.get('/profile/weight-history?days=90');
+      setWeightHistory(res.data);
+    } catch {
+      toast.error('Failed to log weight');
+    }
+  };
+
+  if (loading) return <div className="text-gray-400 text-center py-20">Loading your dashboard...</div>;
+
+  if (error) return (
+    <div className="text-center py-20">
+      <p className="text-red-400 font-medium">Could not reach the server.</p>
+      <p className="text-gray-500 text-sm mt-1">Make sure the backend is running, then refresh.</p>
+    </div>
+  );
+
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Morning' : hour < 17 ? 'Afternoon' : 'Evening';
 
   const isProfileComplete = user?.goal && user?.fitness_level && user?.weight;
 
@@ -49,11 +87,10 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">
-            Good {new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 17 ? 'Afternoon' : 'Evening'}, {user?.username}! 💪
+            Good {greeting}, {user?.username}! 💪
           </h1>
           <p className="text-gray-400 text-sm mt-1">
             {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
@@ -69,7 +106,6 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* Stats cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard
           icon={<Flame size={20} className="text-orange-400" />}
@@ -101,9 +137,7 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* Main content */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Calorie chart */}
         <div className="md:col-span-2 bg-[#111118] rounded-2xl border border-[#222] p-6">
           <div className="flex items-center gap-2 mb-4">
             <TrendingUp size={18} className="text-orange-400" />
@@ -137,7 +171,6 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Macro chart */}
         <div className="bg-[#111118] rounded-2xl border border-[#222] p-6">
           <h2 className="text-white font-semibold mb-4">Macro Distribution</h2>
           {nutritionPlan ? (
@@ -173,7 +206,60 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Nutrition Summary */}
+      <div className="bg-[#111118] rounded-2xl border border-[#222] p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-white font-semibold flex items-center gap-2">
+            <Scale size={18} className="text-purple-400" /> Weight Progress
+          </h2>
+          {weightHistory.length > 0 && (
+            <span className="text-gray-400 text-sm">
+              Current: <span className="text-white font-medium">{weightHistory[weightHistory.length - 1].weight} kg</span>
+            </span>
+          )}
+        </div>
+
+        <div className="flex gap-2 mb-4">
+          <input
+            type="number"
+            value={weightInput}
+            onChange={e => setWeightInput(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && logWeight()}
+            placeholder="Enter weight (kg)"
+            className="flex-1 bg-[#1a1a24] border border-[#333] rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-purple-500"
+          />
+          <button
+            onClick={logWeight}
+            className="px-4 py-2 bg-purple-500/20 border border-purple-500/30 text-purple-400 rounded-xl text-sm font-medium hover:bg-purple-500/30 transition-colors"
+          >
+            Log
+          </button>
+        </div>
+
+        {weightHistory.length > 1 ? (
+          <ResponsiveContainer width="100%" height={160}>
+            <LineChart data={weightHistory}>
+              <XAxis dataKey="date" tick={{ fill: '#666', fontSize: 11 }} tickFormatter={v => v.slice(5)} />
+              <YAxis
+                tick={{ fill: '#666', fontSize: 11 }}
+                domain={['auto', 'auto']}
+                tickFormatter={v => `${v}kg`}
+              />
+              <Tooltip
+                contentStyle={{ background: '#1a1a24', border: '1px solid #333', borderRadius: '8px' }}
+                formatter={v => [`${v} kg`, 'Weight']}
+              />
+              <Line type="monotone" dataKey="weight" stroke="#a855f7" strokeWidth={2} dot={{ fill: '#a855f7', r: 3 }} />
+            </LineChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="h-24 flex items-center justify-center text-gray-500 text-sm">
+            {weightHistory.length === 1
+              ? 'Log a second entry to see your trend'
+              : 'Log your weight daily to track progress'}
+          </div>
+        )}
+      </div>
+
       {nutritionPlan && (
         <div className="bg-[#111118] rounded-2xl border border-[#222] p-6">
           <h2 className="text-white font-semibold mb-4">Your Daily Nutrition Plan</h2>
@@ -181,7 +267,7 @@ export default function Dashboard() {
             {[
               { label: 'BMR', value: `${nutritionPlan.bmr} kcal`, desc: 'Resting metabolic rate' },
               { label: 'TDEE', value: `${nutritionPlan.tdee} kcal`, desc: 'Total daily expenditure' },
-              { label: 'Calorie Goal', value: `${nutritionPlan.calorie_goal} kcal`, desc: `For ${nutritionPlan.goal.replace('_', ' ')}` },
+              { label: 'Calorie Goal', value: `${nutritionPlan.calorie_goal} kcal`, desc: `For ${nutritionPlan.goal.replace(/_/g, ' ')}` },
               { label: 'Protein Target', value: `${nutritionPlan.macros.protein_g}g`, desc: 'Daily protein intake' },
             ].map(item => (
               <div key={item.label} className="bg-[#1a1a24] rounded-xl p-4">

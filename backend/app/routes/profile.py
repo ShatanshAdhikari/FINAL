@@ -2,9 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional
+from datetime import datetime, timedelta, timezone
 from app.core.database import get_db
 from app.routes.auth import get_current_user
 from app.models.user import User
+from app.models.logs import WeightLog
 from app.services.nutrition_calculator import get_full_nutrition_plan
 
 router = APIRouter(prefix="/profile", tags=["Profile"])
@@ -43,19 +45,61 @@ def update_profile(data: ProfileUpdate, db: Session = Depends(get_db), current_u
     }}
 
 
+class WeightLogCreate(BaseModel):
+    weight: float
+    date: Optional[str] = None  # YYYY-MM-DD, defaults to today
+
+
+@router.post("/weight")
+def log_weight(
+    data: WeightLogCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    date_str = data.date or datetime.now(timezone.utc).date().isoformat()
+    # Upsert: replace entry for the same date if it exists
+    existing = db.query(WeightLog).filter(
+        WeightLog.user_id == current_user.id,
+        WeightLog.date == date_str,
+    ).first()
+    if existing:
+        existing.weight = data.weight
+        existing.logged_at = datetime.now(timezone.utc)
+    else:
+        db.add(WeightLog(user_id=current_user.id, weight=data.weight, date=date_str))
+    db.commit()
+    return {"message": "Weight logged", "weight": data.weight, "date": date_str}
+
+
+@router.get("/weight-history")
+def get_weight_history(
+    days: int = 90,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    since = (datetime.now(timezone.utc) - timedelta(days=days)).date().isoformat()
+    logs = (
+        db.query(WeightLog)
+        .filter(WeightLog.user_id == current_user.id, WeightLog.date >= since)
+        .order_by(WeightLog.date)
+        .all()
+    )
+    return [{"date": l.date, "weight": l.weight} for l in logs]
+
+
 @router.get("/nutrition-plan")
-def get_nutrition_plan(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_nutrition_plan(current_user: User = Depends(get_current_user)):
     if not all([current_user.gender, current_user.age, current_user.weight, current_user.height,
                 current_user.activity_level, current_user.goal, current_user.fitness_level]):
         raise HTTPException(status_code=400, detail="Please complete your profile first")
 
     plan = get_full_nutrition_plan(
-        gender=current_user.gender,
-        age=current_user.age,
-        weight=current_user.weight,
-        height=current_user.height,
-        activity_level=current_user.activity_level,
-        goal=current_user.goal,
-        fitness_level=current_user.fitness_level,
+        gender=current_user.gender or "",
+        age=current_user.age or 0,
+        weight=current_user.weight or 0.0,
+        height=current_user.height or 0.0,
+        activity_level=current_user.activity_level or "",
+        goal=current_user.goal or "",
+        fitness_level=current_user.fitness_level or "",
     )
     return plan

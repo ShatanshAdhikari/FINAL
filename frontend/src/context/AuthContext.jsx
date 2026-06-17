@@ -10,13 +10,24 @@ export function AuthProvider({ children }) {
     try {
       return JSON.parse(stored);
     } catch {
-      // Corrupted data — clear it and treat as logged-out
       localStorage.removeItem('user');
       localStorage.removeItem('token');
       return null;
     }
   });
-  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const storedUser = localStorage.getItem('user');
+    if (token && storedUser) {
+      api.get('/auth/me')
+        .then(res => {
+          localStorage.setItem('user', JSON.stringify(res.data));
+          setUser(res.data);
+        })
+        .catch(() => {});
+    }
+  }, []);
 
   const login = async (username, password) => {
     const form = new URLSearchParams();
@@ -53,15 +64,21 @@ export function AuthProvider({ children }) {
       setUser(updated);
       return updated;
     } catch (e) {
-      logout();
+      if (e.response?.status === 401) {
+        logout();
+      }
     }
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, refreshUser, loading }}>
+    <AuthContext.Provider value={{ user, login, register, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );
 }
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  return ctx;
+};

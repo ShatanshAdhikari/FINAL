@@ -3,6 +3,7 @@ Rule-Based Workout Recommender System
 As described in the GetFit project documentation (Section 3.2.2)
 """
 import random
+from datetime import date
 from typing import List, Dict, Any
 
 # Exercise database organized by type and difficulty
@@ -169,6 +170,7 @@ def generate_workout_plan(
     workout_frequency: int,
     age: int = 25,
     gender: str = "male",
+    user_id: int = 0,
 ) -> Dict[str, Any]:
     """
     Generate a personalized weekly workout plan.
@@ -183,7 +185,10 @@ def generate_workout_plan(
     Returns:
         Dict with weekly workout plan
     """
-    random.seed(42)  # consistent recommendations
+    # Seed by user + ISO week so each user gets a unique plan that rotates weekly
+    week = date.today().isocalendar()[1]
+    seed_val = hash((user_id, fitness_level, goal, workout_frequency, week)) % (2 ** 32)
+    random.seed(seed_val)
     days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
     workout_days = days[:workout_frequency]
 
