@@ -15,6 +15,8 @@ router = APIRouter(prefix="/workout", tags=["Workout"])
 class WorkoutLogCreate(BaseModel):
     exercise_name: str
     duration_minutes: float
+    sets: Optional[int] = None
+    reps: Optional[int] = None
     heart_rate: Optional[float] = None
     calories_burned: Optional[float] = None
     notes: Optional[str] = None
@@ -81,6 +83,8 @@ def log_workout(
         user_id=current_user.id,
         exercise_name=data.exercise_name,
         duration_minutes=data.duration_minutes,
+        sets=data.sets,
+        reps=data.reps,
         heart_rate=data.heart_rate,
         calories_burned=data.calories_burned,
         notes=data.notes,
@@ -102,6 +106,8 @@ def get_workout_logs(
             "id": log.id,
             "exercise_name": log.exercise_name,
             "duration_minutes": log.duration_minutes,
+            "sets": log.sets,
+            "reps": log.reps,
             "heart_rate": log.heart_rate,
             "calories_burned": log.calories_burned,
             "notes": log.notes,

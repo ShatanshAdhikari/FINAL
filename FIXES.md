@@ -114,6 +114,48 @@ raise HTTPException(400, detail=f"Profile incomplete — please set: {', '.join(
 
 ---
 
+## Runtime Testing Bugs (2026-06-18)
+
+### BUG-04 — Invalid Goal Values Accepted and Silently Miscalculated `🟠 ✅`
+**File:** `backend/app/routes/profile.py`
+
+**Problem:** `ProfileUpdate` typed `goal`, `fitness_level`, `activity_level`, and `gender` as plain `Optional[str]`. Any string (e.g. `"weight_loss"`, `"expert"`) was accepted and stored. The nutrition calculator and workout recommender would then silently fall back to defaults — `muscle_gain` macros and zero calorie adjustment — producing wrong nutrition plans with no error shown to the user.
+
+**Fix:** Changed all four fields to `Optional[Literal[...]]` with the exact set of valid values. Invalid input now returns HTTP 422 before touching the database.
+
+---
+
+### BUG-05 — `/nutrition/search` Required No Authentication `🟠 ✅`
+**File:** `backend/app/routes/nutrition.py`
+
+**Problem:** The `search_food` endpoint was the only data endpoint that accepted requests without a valid JWT token. Any unauthenticated caller could query the food search (and by extension hit the OpenFoodFacts API on the server's behalf), inconsistent with every other route.
+
+**Fix:** Added `current_user: User = Depends(get_current_user)` to `search_food`. Unauthenticated requests now return HTTP 401.
+
+---
+
+### BUG-06 — Food Search 502 Exposed Raw Exception to Client `🟡 ✅`
+**File:** `backend/app/routes/nutrition.py`
+
+**Problem:** When OpenFoodFacts returned a non-2xx response, the raw exception string (including the full URL and HTTP status from the external service) was forwarded directly in the `detail` field of the 502 response. This leaked internal implementation details.
+
+**Fix:** Exception is now caught and replaced with a user-friendly message: *"Food search is temporarily unavailable. You can still log food manually using the calorie log."*
+
+---
+
+### BUG-07 — Workout Log Missing `sets` and `reps` Fields `🟡 ✅`
+**Files:** `backend/app/models/logs.py`, `backend/app/routes/workout.py`, `backend/app/main.py`, `frontend/src/pages/WorkoutPlan.jsx`
+
+**Problem:** The workout plan UI displayed every exercise with sets × reps (e.g. "3 sets × 8-12 reps"), but `WorkoutLogCreate` and `WorkoutLog` had no fields to record these values. Users could only log exercise name, duration, heart rate, and calories — meaning the structured plan data was untrackable.
+
+**Fix:**
+- Added `sets: Optional[int]` and `reps: Optional[int]` columns to the `WorkoutLog` SQLAlchemy model
+- Added a startup migration in `main.py` using `PRAGMA table_info` + `ALTER TABLE ADD COLUMN` so existing SQLite databases gain the columns without data loss
+- Added `sets` and `reps` to `WorkoutLogCreate` and the `/workout/logs` response
+- Frontend log form now includes Sets and Reps inputs; recent workout history shows `4×10` notation when both are present
+
+---
+
 ## UX / Code Quality
 
 ### UX-01 — `loading` State in AuthContext Was Unused `🟡 🔲`

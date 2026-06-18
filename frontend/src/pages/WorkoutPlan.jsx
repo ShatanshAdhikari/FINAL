@@ -104,7 +104,7 @@ export default function WorkoutPlan() {
   const [loading, setLoading] = useState(true);
   const [expandedDay, setExpandedDay] = useState(null);
 
-  const [logForm, setLogForm] = useState({ exercise_name: '', duration_minutes: '', heart_rate: '', calories_burned: '' });
+  const [logForm, setLogForm] = useState({ exercise_name: '', duration_minutes: '', sets: '', reps: '', heart_rate: '', calories_burned: '' });
   const [logs, setLogs] = useState([]);
 
   const fetchPlan = useCallback(async () => {
@@ -140,11 +140,13 @@ export default function WorkoutPlan() {
       await api.post('/workout/log', {
         exercise_name: logForm.exercise_name,
         duration_minutes: parseFloat(logForm.duration_minutes),
+        sets: logForm.sets ? parseInt(logForm.sets) : null,
+        reps: logForm.reps ? parseInt(logForm.reps) : null,
         heart_rate: logForm.heart_rate ? parseFloat(logForm.heart_rate) : null,
         calories_burned: logForm.calories_burned ? parseFloat(logForm.calories_burned) : null,
       });
       toast.success('Workout logged! 💪');
-      setLogForm({ exercise_name: '', duration_minutes: '', heart_rate: '', calories_burned: '' });
+      setLogForm({ exercise_name: '', duration_minutes: '', sets: '', reps: '', heart_rate: '', calories_burned: '' });
       void fetchLogs();
     } catch {
       toast.error('Failed to log workout');
@@ -239,10 +241,12 @@ export default function WorkoutPlan() {
         <h2 className="text-white font-semibold mb-4 flex items-center gap-2">
           <Activity size={18} className="text-green-400" /> Log Workout
         </h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-3">
           {[
             { key: 'exercise_name', label: 'Exercise', placeholder: 'e.g. Push-Ups' },
             { key: 'duration_minutes', label: 'Duration (min)', placeholder: '30', type: 'number' },
+            { key: 'sets', label: 'Sets', placeholder: '3', type: 'number' },
+            { key: 'reps', label: 'Reps', placeholder: '12', type: 'number' },
             { key: 'heart_rate', label: 'Heart Rate (BPM)', placeholder: '140', type: 'number' },
             { key: 'calories_burned', label: 'Calories Burned', placeholder: '200', type: 'number' },
           ].map(f => (
@@ -273,6 +277,9 @@ export default function WorkoutPlan() {
                 <div>
                   <span className="text-white font-medium">{log.exercise_name}</span>
                   <span className="text-gray-500 ml-2">{log.duration_minutes} min</span>
+                  {log.sets && log.reps && (
+                    <span className="text-gray-500 ml-2 text-xs">{log.sets}×{log.reps}</span>
+                  )}
                 </div>
                 <div className="text-right">
                   {log.calories_burned && <span className="text-orange-400 text-xs">{log.calories_burned} kcal</span>}

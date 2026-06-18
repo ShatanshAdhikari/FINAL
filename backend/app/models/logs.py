@@ -32,6 +32,8 @@ class WorkoutLog(Base):
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)
     exercise_name: Mapped[str] = mapped_column(String, nullable=False)
     duration_minutes: Mapped[float] = mapped_column(Float, nullable=False)
+    sets: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    reps: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     heart_rate: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     calories_burned: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)

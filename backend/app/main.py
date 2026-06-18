@@ -1,10 +1,20 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 from app.core.database import engine, Base
 import app.models  # ensure models are registered
 
 # Create tables
 Base.metadata.create_all(bind=engine)
+
+# Migrate existing workout_logs table to add sets/reps columns if missing
+with engine.connect() as conn:
+    existing = {row[1] for row in conn.execute(text("PRAGMA table_info(workout_logs)"))}
+    if "sets" not in existing:
+        conn.execute(text("ALTER TABLE workout_logs ADD COLUMN sets INTEGER"))
+    if "reps" not in existing:
+        conn.execute(text("ALTER TABLE workout_logs ADD COLUMN reps INTEGER"))
+    conn.commit()
 
 app = FastAPI(
     title="GetFit API",
