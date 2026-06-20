@@ -13,3 +13,7 @@ python-dotenv
 pydantic-settings
 email-validator
 joblib
+matplotlib
+seaborn
+scipy
+jupyter
