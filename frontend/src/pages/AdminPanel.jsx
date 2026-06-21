@@ -53,18 +53,18 @@ export default function AdminPanel() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0f0f0f] p-8">
+    <div className="min-h-screen bg-[var(--bg-base)] p-8">
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">
           <button
             onClick={() => navigate('/dashboard')}
-            className="p-2 rounded-xl bg-[#111118] border border-[#222] text-gray-400 hover:text-white transition-colors"
+            className="p-2 rounded-xl bg-[var(--bg-surface)] border border-[var(--border)] text-gray-400 hover:text-[var(--text-primary)] transition-colors"
           >
             <ArrowLeft size={20} />
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-white">Admin Panel</h1>
+            <h1 className="text-2xl font-bold text-[var(--text-primary)]">Admin Panel</h1>
             <p className="text-gray-400 text-sm">Manage users and view system statistics</p>
           </div>
         </div>
@@ -73,13 +73,13 @@ export default function AdminPanel() {
         {stats && (
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             {[
-              { label: 'Total Users', value: stats.total_users, color: 'text-white' },
+              { label: 'Total Users', value: stats.total_users, color: 'text-[var(--text-primary)]' },
               { label: 'Active Users', value: stats.active_users, color: 'text-green-400' },
               { label: 'Calorie Logs', value: stats.total_calorie_logs, color: 'text-orange-400' },
               { label: 'Workout Logs', value: stats.total_workout_logs, color: 'text-blue-400' },
               { label: 'Step Logs', value: stats.total_step_logs, color: 'text-purple-400' },
             ].map(s => (
-              <div key={s.label} className="bg-[#111118] rounded-2xl border border-[#222] p-5 text-center">
+              <div key={s.label} className="bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] p-5 text-center">
                 <div className={`text-3xl font-bold ${s.color}`}>{s.value}</div>
                 <div className="text-gray-400 text-xs mt-1">{s.label}</div>
               </div>
@@ -88,10 +88,10 @@ export default function AdminPanel() {
         )}
 
         {/* Users Table */}
-        <div className="bg-[#111118] rounded-2xl border border-[#222] overflow-hidden">
-          <div className="p-6 border-b border-[#222] flex items-center gap-2">
+        <div className="bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] overflow-hidden">
+          <div className="p-6 border-b border-[var(--border)] flex items-center gap-2">
             <Users size={18} className="text-purple-400" />
-            <h2 className="text-white font-semibold">All Users</h2>
+            <h2 className="text-[var(--text-primary)] font-semibold">All Users</h2>
             <span className="ml-auto text-gray-500 text-sm">{users.length} users</span>
           </div>
           {loading ? (
@@ -100,7 +100,7 @@ export default function AdminPanel() {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-[#222]">
+                  <tr className="border-b border-[var(--border)]">
                     {['ID', 'Username', 'Email', 'Goal', 'Level', 'Status', 'Joined', 'Actions'].map(h => (
                       <th key={h} className="text-left text-xs text-gray-500 font-medium px-6 py-3">{h}</th>
                     ))}
@@ -108,14 +108,14 @@ export default function AdminPanel() {
                 </thead>
                 <tbody>
                   {users.map(u => (
-                    <tr key={u.id} className="border-b border-[#1a1a1a] hover:bg-white/5 transition-colors">
+                    <tr key={u.id} className="border-b border-[var(--border-subtle)] hover:bg-white/5 transition-colors">
                       <td className="px-6 py-4 text-gray-500 text-sm">#{u.id}</td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center text-white text-xs font-bold">
+                          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center text-[var(--text-primary)] text-xs font-bold">
                             {u.username?.[0]?.toUpperCase() ?? '?'}
                           </div>
-                          <span className="text-white text-sm font-medium">{u.username}</span>
+                          <span className="text-[var(--text-primary)] text-sm font-medium">{u.username}</span>
                           {u.is_admin && <span className="text-xs bg-purple-500/20 text-purple-400 px-1.5 py-0.5 rounded">admin</span>}
                         </div>
                       </td>

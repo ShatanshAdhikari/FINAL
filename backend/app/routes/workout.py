@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
 from app.core.database import get_db
 from app.routes.auth import get_current_user
@@ -13,19 +13,19 @@ router = APIRouter(prefix="/workout", tags=["Workout"])
 
 
 class WorkoutLogCreate(BaseModel):
-    exercise_name: str
-    duration_minutes: float
-    sets: Optional[int] = None
-    reps: Optional[int] = None
-    heart_rate: Optional[float] = None
-    calories_burned: Optional[float] = None
-    notes: Optional[str] = None
+    exercise_name: str = Field(..., min_length=1, max_length=200)
+    duration_minutes: float = Field(..., ge=1, le=600)
+    sets: Optional[int] = Field(None, ge=1, le=100)
+    reps: Optional[int] = Field(None, ge=1, le=1000)
+    heart_rate: Optional[float] = Field(None, ge=30, le=250)
+    calories_burned: Optional[float] = Field(None, ge=0, le=5000)
+    notes: Optional[str] = Field(None, max_length=500)
 
 
 class CaloriePredictRequest(BaseModel):
-    duration_minutes: float
-    heart_rate: float
-    body_temp: Optional[float] = 37.5
+    duration_minutes: float = Field(..., ge=1, le=600)
+    heart_rate: float = Field(..., ge=30, le=250)
+    body_temp: Optional[float] = Field(37.5, ge=35.0, le=43.0)
 
 
 @router.get("/plan")
@@ -61,7 +61,7 @@ def predict_workout_calories(
             detail=f"Profile incomplete — please set: {', '.join(missing)}"
         )
 
-    calories = predict_calories(
+    result = predict_calories(
         gender=current_user.gender or "",
         age=current_user.age or 0,
         height=current_user.height or 0.0,
@@ -70,7 +70,11 @@ def predict_workout_calories(
         heart_rate=data.heart_rate,
         body_temp=data.body_temp or 37.5,
     )
-    return {"predicted_calories_burned": calories}
+    return {
+        "predicted_calories_burned": result["calories"],
+        "confidence_low": result["low"],
+        "confidence_high": result["high"],
+    }
 
 
 @router.post("/log")
@@ -97,10 +101,19 @@ def log_workout(
 
 @router.get("/logs")
 def get_workout_logs(
+    skip: int = 0,
+    limit: int = 20,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    logs = db.query(WorkoutLog).filter(WorkoutLog.user_id == current_user.id).order_by(WorkoutLog.logged_at.desc()).limit(50).all()
+    logs = (
+        db.query(WorkoutLog)
+        .filter(WorkoutLog.user_id == current_user.id)
+        .order_by(WorkoutLog.logged_at.desc())
+        .offset(skip)
+        .limit(min(limit, 100))
+        .all()
+    )
     return [
         {
             "id": log.id,
@@ -115,3 +128,20 @@ def get_workout_logs(
         }
         for log in logs
     ]
+
+
+@router.delete("/log/{log_id}")
+def delete_workout_log(
+    log_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    log = db.query(WorkoutLog).filter(
+        WorkoutLog.id == log_id,
+        WorkoutLog.user_id == current_user.id,
+    ).first()
+    if not log:
+        raise HTTPException(status_code=404, detail="Workout log not found")
+    db.delete(log)
+    db.commit()
+    return {"message": "Workout log deleted"}

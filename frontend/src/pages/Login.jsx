@@ -25,17 +25,17 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0f0f0f] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[var(--bg-base)] flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <img src={logo} alt="GetFit" className="w-56 rounded-2xl mb-3 bg-[#0f0f0f] p-2" />
+          <img src={logo} alt="GetFit" className="w-56 rounded-2xl mb-3 bg-[var(--bg-base)] p-2" />
           <p className="text-gray-400 text-sm">Your personal fitness companion</p>
         </div>
 
         {/* Form */}
-        <div className="bg-[#111118] rounded-2xl border border-[#222] p-8">
-          <h2 className="text-xl font-semibold text-white mb-6">Sign In</h2>
+        <div className="bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] p-8">
+          <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-6">Sign In</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm text-gray-400 mb-1">Email or Username</label>
@@ -43,7 +43,7 @@ export default function Login() {
                 type="text"
                 value={form.username}
                 onChange={(e) => setForm({ ...form, username: e.target.value })}
-                className="w-full bg-[#1a1a24] border border-[#333] rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-orange-500 transition-colors"
+                className="w-full bg-[var(--bg-nested)] border border-[var(--border-input)] rounded-xl px-4 py-3 text-[var(--text-primary)] text-sm focus:outline-none focus:border-orange-500 transition-colors"
                 placeholder="Enter your email or username"
                 required
               />
@@ -54,7 +54,7 @@ export default function Login() {
                 type="password"
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
-                className="w-full bg-[#1a1a24] border border-[#333] rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-orange-500 transition-colors"
+                className="w-full bg-[var(--bg-nested)] border border-[var(--border-input)] rounded-xl px-4 py-3 text-[var(--text-primary)] text-sm focus:outline-none focus:border-orange-500 transition-colors"
                 placeholder="Enter your password"
                 required
               />
@@ -62,7 +62,7 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-orange-500 to-red-600 text-white font-semibold py-3 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 mt-2"
+              className="w-full bg-gradient-to-r from-orange-500 to-red-600 text-[var(--text-primary)] font-semibold py-3 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 mt-2"
             >
               {loading ? 'Signing in...' : 'Sign In'}
             </button>

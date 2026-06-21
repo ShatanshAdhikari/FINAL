@@ -1,7 +1,8 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import {
-  LayoutDashboard, Dumbbell, Apple, Footprints, User, LogOut, Shield
+  LayoutDashboard, Dumbbell, Apple, Footprints, User, LogOut, Shield, Sun, Moon
 } from 'lucide-react';
 import logo from '../assets/logo.png';
 
@@ -15,6 +16,7 @@ const navItems = [
 
 export default function Layout() {
   const { user, logout } = useAuth();
+  const { theme, toggle } = useTheme();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -23,13 +25,13 @@ export default function Layout() {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#0f0f0f]">
+    <div className="flex min-h-screen bg-[var(--bg-base)]">
 
       {/* ── Desktop Sidebar ───────────────────────────────── */}
-      <aside className="hidden md:flex w-64 bg-[#111118] border-r border-[#222] flex-col fixed h-full z-10">
+      <aside className="hidden md:flex w-64 bg-[var(--bg-surface)] border-r border-[var(--border)] flex-col fixed h-full z-10">
         {/* Logo */}
-        <div className="p-4 border-b border-[#222] flex items-center justify-center">
-          <img src={logo} alt="GetFit" className="w-48 rounded-xl bg-[#111118] p-2" />
+        <div className="p-4 border-b border-[var(--border)] flex items-center justify-center">
+          <img src={logo} alt="GetFit" className="w-48 rounded-xl bg-[var(--bg-surface)] p-2" />
         </div>
 
         {/* Nav */}
@@ -42,7 +44,7 @@ export default function Layout() {
                 `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
                   isActive
                     ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
-                    : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                    : 'text-gray-400 hover:bg-white/5 hover:text-[var(--text-primary)]'
                 }`
               }
             >
@@ -58,7 +60,7 @@ export default function Layout() {
                 `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
                   isActive
                     ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
-                    : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                    : 'text-gray-400 hover:bg-white/5 hover:text-[var(--text-primary)]'
                 }`
               }
             >
@@ -69,16 +71,24 @@ export default function Layout() {
         </nav>
 
         {/* User info + logout */}
-        <div className="p-4 border-t border-[#222]">
+        <div className="p-4 border-t border-[var(--border)]">
           <div className="flex items-center gap-3 mb-3 px-2">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center text-white text-sm font-bold">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center text-[var(--text-primary)] text-sm font-bold">
               {user?.username?.[0]?.toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-white text-sm font-medium truncate">{user?.username}</p>
+              <p className="text-[var(--text-primary)] text-sm font-medium truncate">{user?.username}</p>
               <p className="text-gray-500 text-xs truncate">{user?.email}</p>
             </div>
           </div>
+          <button
+            onClick={toggle}
+            aria-label="Toggle theme"
+            className="w-full flex items-center gap-3 px-4 py-2 rounded-xl text-sm text-gray-400 hover:bg-white/5 hover:text-[var(--text-primary)] transition-all mb-1"
+          >
+            {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+            {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+          </button>
           <button
             onClick={handleLogout}
             className="w-full flex items-center gap-3 px-4 py-2 rounded-xl text-sm text-gray-400 hover:bg-red-500/10 hover:text-red-400 transition-all"
@@ -96,7 +106,7 @@ export default function Layout() {
       </main>
 
       {/* ── Mobile Bottom Nav Bar ─────────────────────────── */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-20 bg-[#111118] border-t border-[#222]">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-20 bg-[var(--bg-surface)] border-t border-[var(--border)]">
         <div className="flex items-center justify-around px-1 py-2">
           {navItems.map(({ to, icon: Icon, label }) => (
             <NavLink
@@ -127,6 +137,14 @@ export default function Layout() {
             </NavLink>
           )}
 
+          <button
+            onClick={toggle}
+            aria-label="Toggle theme"
+            className="flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl text-[10px] font-medium text-gray-500 hover:text-[var(--text-primary)] transition-all"
+          >
+            {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+            <span>{theme === 'dark' ? 'Light' : 'Dark'}</span>
+          </button>
           <button
             onClick={handleLogout}
             className="flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl text-[10px] font-medium text-gray-500 hover:text-red-400 transition-all"

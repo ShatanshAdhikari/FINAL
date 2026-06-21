@@ -17,3 +17,6 @@ matplotlib
 seaborn
 scipy
 jupyter
+slowapi
+pytest
+httpx

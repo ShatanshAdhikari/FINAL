@@ -67,28 +67,28 @@ export default function Onboarding() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0f0f0f] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[var(--bg-base)] flex items-center justify-center p-4">
       <div className="w-full max-w-2xl">
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             {steps.map((_, i) => (
               <div key={i} className="flex items-center">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all ${
-                  i <= step ? 'bg-orange-500 text-white' : 'bg-[#222] text-gray-500'
+                  i <= step ? 'bg-orange-500 text-[var(--text-primary)]' : 'bg-[var(--bg-muted)] text-gray-500'
                 }`}>
                   {i + 1}
                 </div>
                 {i < steps.length - 1 && (
-                  <div className={`h-1 w-24 mx-2 rounded ${i < step ? 'bg-orange-500' : 'bg-[#222]'}`} />
+                  <div className={`h-1 w-24 mx-2 rounded ${i < step ? 'bg-orange-500' : 'bg-[var(--bg-muted)]'}`} />
                 )}
               </div>
             ))}
           </div>
-          <h2 className="text-2xl font-bold text-white">{steps[step]}</h2>
+          <h2 className="text-2xl font-bold text-[var(--text-primary)]">{steps[step]}</h2>
           <p className="text-gray-400 text-sm mt-1">Step {step + 1} of {steps.length}</p>
         </div>
 
-        <div className="bg-[#111118] rounded-2xl border border-[#222] p-8">
+        <div className="bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] p-8">
           {step === 0 && (
             <div className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
@@ -98,7 +98,7 @@ export default function Onboarding() {
                     type="number" min="10" max="100"
                     value={form.age}
                     onChange={(e) => update('age', e.target.value)}
-                    className="w-full bg-[#1a1a24] border border-[#333] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500"
+                    className="w-full bg-[var(--bg-nested)] border border-[var(--border-input)] rounded-xl px-4 py-3 text-[var(--text-primary)] focus:outline-none focus:border-orange-500"
                     placeholder="25"
                   />
                 </div>
@@ -107,7 +107,7 @@ export default function Onboarding() {
                   <select
                     value={form.gender}
                     onChange={(e) => update('gender', e.target.value)}
-                    className="w-full bg-[#1a1a24] border border-[#333] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500"
+                    className="w-full bg-[var(--bg-nested)] border border-[var(--border-input)] rounded-xl px-4 py-3 text-[var(--text-primary)] focus:outline-none focus:border-orange-500"
                   >
                     <option value="male">Male</option>
                     <option value="female">Female</option>
@@ -119,7 +119,7 @@ export default function Onboarding() {
                     type="number" min="30" max="300" step="0.1"
                     value={form.weight}
                     onChange={(e) => update('weight', e.target.value)}
-                    className="w-full bg-[#1a1a24] border border-[#333] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500"
+                    className="w-full bg-[var(--bg-nested)] border border-[var(--border-input)] rounded-xl px-4 py-3 text-[var(--text-primary)] focus:outline-none focus:border-orange-500"
                     placeholder="70"
                   />
                 </div>
@@ -129,7 +129,7 @@ export default function Onboarding() {
                     type="number" min="100" max="250"
                     value={form.height}
                     onChange={(e) => update('height', e.target.value)}
-                    className="w-full bg-[#1a1a24] border border-[#333] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500"
+                    className="w-full bg-[var(--bg-nested)] border border-[var(--border-input)] rounded-xl px-4 py-3 text-[var(--text-primary)] focus:outline-none focus:border-orange-500"
                     placeholder="175"
                   />
                 </div>
@@ -148,8 +148,8 @@ export default function Onboarding() {
                       onClick={() => update('goal', g.value)}
                       className={`p-4 rounded-xl border text-left transition-all ${
                         form.goal === g.value
-                          ? 'border-orange-500 bg-orange-500/10 text-white'
-                          : 'border-[#333] bg-[#1a1a24] text-gray-300 hover:border-gray-500'
+                          ? 'border-orange-500 bg-orange-500/10 text-[var(--text-primary)]'
+                          : 'border-[var(--border-input)] bg-[var(--bg-nested)] text-gray-300 hover:border-gray-500'
                       }`}
                     >
                       <div className="font-semibold">{g.label}</div>
@@ -167,8 +167,8 @@ export default function Onboarding() {
                       onClick={() => update('fitness_level', l.value)}
                       className={`w-full p-4 rounded-xl border text-left transition-all ${
                         form.fitness_level === l.value
-                          ? 'border-orange-500 bg-orange-500/10 text-white'
-                          : 'border-[#333] bg-[#1a1a24] text-gray-300 hover:border-gray-500'
+                          ? 'border-orange-500 bg-orange-500/10 text-[var(--text-primary)]'
+                          : 'border-[var(--border-input)] bg-[var(--bg-nested)] text-gray-300 hover:border-gray-500'
                       }`}
                     >
                       <span className="font-semibold">{l.label}</span>
@@ -191,8 +191,8 @@ export default function Onboarding() {
                       onClick={() => update('activity_level', a.value)}
                       className={`w-full p-3 rounded-xl border text-left transition-all ${
                         form.activity_level === a.value
-                          ? 'border-orange-500 bg-orange-500/10 text-white'
-                          : 'border-[#333] bg-[#1a1a24] text-gray-300 hover:border-gray-500'
+                          ? 'border-orange-500 bg-orange-500/10 text-[var(--text-primary)]'
+                          : 'border-[var(--border-input)] bg-[var(--bg-nested)] text-gray-300 hover:border-gray-500'
                       }`}
                     >
                       <span className="font-semibold text-sm">{a.label}</span>
@@ -222,7 +222,7 @@ export default function Onboarding() {
             {step > 0 && (
               <button
                 onClick={() => setStep(s => s - 1)}
-                className="flex-1 py-3 rounded-xl border border-[#333] text-gray-300 hover:border-gray-500 transition-colors"
+                className="flex-1 py-3 rounded-xl border border-[var(--border-input)] text-gray-300 hover:border-gray-500 transition-colors"
               >
                 Back
               </button>
@@ -244,7 +244,7 @@ export default function Onboarding() {
                   }
                   setStep(s => s + 1);
                 }}
-                className="flex-1 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-red-600 text-white font-semibold hover:opacity-90 transition-opacity"
+                className="flex-1 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-red-600 text-[var(--text-primary)] font-semibold hover:opacity-90 transition-opacity"
               >
                 Continue
               </button>
@@ -252,7 +252,7 @@ export default function Onboarding() {
               <button
                 onClick={handleFinish}
                 disabled={loading}
-                className="flex-1 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-red-600 text-white font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
+                className="flex-1 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-red-600 text-[var(--text-primary)] font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
               >
                 {loading ? 'Saving...' : 'Finish Setup 🎯'}
               </button>

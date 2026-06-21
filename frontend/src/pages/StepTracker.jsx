@@ -139,15 +139,15 @@ export default function StepTracker() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-white">Step Tracker</h1>
+        <h1 className="text-2xl font-bold text-[var(--text-primary)]">Step Tracker</h1>
         <p className="text-gray-400 text-sm mt-1">Track your daily steps and activity</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-[#111118] rounded-2xl border border-[#222] p-8 flex flex-col items-center justify-center">
+        <div className="bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] p-8 flex flex-col items-center justify-center">
           <div className="relative">
             <svg width="160" height="160" className="-rotate-90">
-              <circle cx="80" cy="80" r="70" fill="none" stroke="#1a1a24" strokeWidth="10" />
+              <circle cx="80" cy="80" r="70" fill="none" strokeWidth="10" style={{ stroke: 'var(--bg-muted)' }} />
               <circle
                 cx="80" cy="80" r="70" fill="none"
                 stroke="#f97316" strokeWidth="10"
@@ -158,7 +158,7 @@ export default function StepTracker() {
               />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <div className="text-3xl font-bold text-white">{today?.steps?.toLocaleString() || 0}</div>
+              <div className="text-3xl font-bold text-[var(--text-primary)]">{today?.steps?.toLocaleString() || 0}</div>
               <div className="text-gray-400 text-xs">/ {STEP_GOAL.toLocaleString()}</div>
             </div>
           </div>
@@ -166,34 +166,34 @@ export default function StepTracker() {
         </div>
 
         <div className="space-y-4">
-          <div className="bg-[#111118] rounded-2xl border border-[#222] p-5 flex items-center gap-4">
+          <div className="bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] p-5 flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-orange-500/10 flex items-center justify-center">
               <Flame size={24} className="text-orange-400" />
             </div>
             <div>
-              <div className="text-2xl font-bold text-white">
+              <div className="text-2xl font-bold text-[var(--text-primary)]">
                 {Math.round(today?.calories_from_steps || 0)} kcal
               </div>
               <div className="text-gray-400 text-sm">Calories from steps</div>
             </div>
           </div>
-          <div className="bg-[#111118] rounded-2xl border border-[#222] p-5 flex items-center gap-4">
+          <div className="bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] p-5 flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-red-500/10 flex items-center justify-center">
               <Heart size={24} className="text-red-400" />
             </div>
             <div>
-              <div className="text-2xl font-bold text-white">
+              <div className="text-2xl font-bold text-[var(--text-primary)]">
                 {today?.bmr ? `${today.bmr} kcal` : '—'}
               </div>
               <div className="text-gray-400 text-sm">Basal Metabolic Rate</div>
             </div>
           </div>
-          <div className="bg-[#111118] rounded-2xl border border-[#222] p-5 flex items-center gap-4">
+          <div className="bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] p-5 flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
               <Footprints size={24} className="text-blue-400" />
             </div>
             <div>
-              <div className="text-2xl font-bold text-white">
+              <div className="text-2xl font-bold text-[var(--text-primary)]">
                 {today?.steps ? `~${((today.steps * 0.762) / 1000).toFixed(1)} km` : '0 km'}
               </div>
               <div className="text-gray-400 text-sm">Distance (est.)</div>
@@ -203,10 +203,10 @@ export default function StepTracker() {
       </div>
 
       {isSupported && (
-        <div className="bg-[#111118] rounded-2xl border border-[#222] p-6">
+        <div className="bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] p-6">
           <div className="flex items-center justify-between mb-1">
-            <h2 className="text-white font-semibold">Live Step Counter</h2>
-            <span className="text-xs text-gray-500 bg-[#1a1a24] px-2 py-1 rounded-lg">
+            <h2 className="text-[var(--text-primary)] font-semibold">Live Step Counter</h2>
+            <span className="text-xs text-gray-500 bg-[var(--bg-nested)] px-2 py-1 rounded-lg">
               Uses phone motion sensor
             </span>
           </div>
@@ -215,8 +215,8 @@ export default function StepTracker() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center gap-4">
-            <div className="flex-1 w-full bg-[#1a1a24] rounded-2xl p-6 text-center">
-              <div className={`text-5xl font-bold tabular-nums transition-all ${isRunning ? 'text-orange-400' : 'text-white'}`}>
+            <div className="flex-1 w-full bg-[var(--bg-nested)] rounded-2xl p-6 text-center">
+              <div className={`text-5xl font-bold tabular-nums transition-all ${isRunning ? 'text-orange-400' : 'text-[var(--text-primary)]'}`}>
                 {liveSteps.toLocaleString()}
               </div>
               <div className="text-gray-500 text-sm mt-2">
@@ -250,8 +250,8 @@ export default function StepTracker() {
         </div>
       )}
 
-      <div className="bg-[#111118] rounded-2xl border border-[#222] p-6">
-        <h2 className="text-white font-semibold mb-1">Update Today's Steps</h2>
+      <div className="bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] p-6">
+        <h2 className="text-[var(--text-primary)] font-semibold mb-1">Update Today's Steps</h2>
         <p className="text-gray-500 text-xs mb-4">
           {isSupported
             ? 'Or type a count directly — e.g. from a fitness band or watch.'
@@ -263,7 +263,7 @@ export default function StepTracker() {
             value={stepInput}
             onChange={(e) => setStepInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && logSteps()}
-            className="flex-1 bg-[#1a1a24] border border-[#333] rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-orange-500"
+            className="flex-1 bg-[var(--bg-nested)] border border-[var(--border-input)] rounded-xl px-4 py-3 text-[var(--text-primary)] text-sm focus:outline-none focus:border-orange-500"
             placeholder="Enter step count (e.g. 8500)"
             min="0"
           />
@@ -277,14 +277,14 @@ export default function StepTracker() {
         </div>
       </div>
 
-      <div className="bg-[#111118] rounded-2xl border border-[#222] p-6">
-        <h2 className="text-white font-semibold mb-4">7-Day Step History</h2>
+      <div className="bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] p-6">
+        <h2 className="text-[var(--text-primary)] font-semibold mb-4">7-Day Step History</h2>
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={history}>
             <XAxis dataKey="date" tick={{ fill: '#666', fontSize: 11 }} tickFormatter={v => v.slice(5)} />
             <YAxis tick={{ fill: '#666', fontSize: 11 }} />
             <Tooltip
-              contentStyle={{ background: '#1a1a24', border: '1px solid #333', borderRadius: '8px' }}
+              contentStyle={{ background: 'var(--bg-nested)', border: '1px solid var(--border-input)', borderRadius: '8px' }}
               formatter={(v) => [v.toLocaleString(), 'Steps']}
             />
             <Bar dataKey="steps" fill="#3b82f6" radius={[4, 4, 0, 0]} />

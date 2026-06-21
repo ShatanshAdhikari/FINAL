@@ -11,6 +11,7 @@ import StepTracker from './pages/StepTracker';
 import Profile from './pages/Profile';
 import AdminPanel from './pages/AdminPanel';
 import Layout from './components/Layout';
+import ErrorBoundary from './components/ErrorBoundary';
 
 function ProtectedRoute({ children }) {
   const { user } = useAuth();
@@ -47,13 +48,13 @@ export default function App() {
           <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
           <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
           <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/workout" element={<WorkoutPlan />} />
-            <Route path="/calories" element={<CalorieTracker />} />
-            <Route path="/steps" element={<StepTracker />} />
-            <Route path="/profile" element={<Profile />} />
+            <Route path="/dashboard" element={<ErrorBoundary><Dashboard /></ErrorBoundary>} />
+            <Route path="/workout" element={<ErrorBoundary><WorkoutPlan /></ErrorBoundary>} />
+            <Route path="/calories" element={<ErrorBoundary><CalorieTracker /></ErrorBoundary>} />
+            <Route path="/steps" element={<ErrorBoundary><StepTracker /></ErrorBoundary>} />
+            <Route path="/profile" element={<ErrorBoundary><Profile /></ErrorBoundary>} />
           </Route>
-          <Route path="/admin" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin" element={<AdminRoute><ErrorBoundary><AdminPanel /></ErrorBoundary></AdminRoute>} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
