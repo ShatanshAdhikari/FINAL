@@ -1,0 +1,11 @@
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.env
+getfit.db
+*.db
+.pytest_cache/
+tests/
+notebooks/
+app/ml/data/
