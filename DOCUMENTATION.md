@@ -2,7 +2,6 @@
 
 > Personalized Fitness & Nutrition Web Application  
 > Stack: React (Vite) · FastAPI · SQLite · Scikit-learn  
-> Branch: `feat/improvements` — last updated 2026-06-21
 
 ---
 
@@ -24,6 +23,7 @@
 14. [Role System & Permissions](#14-role-system--permissions)
 15. [API Request & Response Examples](#15-api-request--response-examples)
 16. [Testing](#16-testing)
+17. [Docker Setup](#17-docker-setup)
 
 ---
 
@@ -189,7 +189,7 @@ Configured in `vite.config.js`:
 server: {
   proxy: {
     '/api': {
-      target: 'http://localhost:8000',
+      target: process.env.VITE_API_TARGET || 'http://localhost:8000',
       changeOrigin: true,
       rewrite: (path) => path.replace(/^\/api/, ''),
     },
@@ -197,7 +197,7 @@ server: {
 },
 ```
 
-In a production build, Nginx (or equivalent) must replicate this proxy rule.
+The `VITE_API_TARGET` environment variable allows the proxy target to be overridden at startup. When running via Docker, `docker-compose.yml` sets `VITE_API_TARGET=http://backend:8000` so the Vite dev server routes `/api` requests to the backend container by its service name. When running locally via the `.bat` scripts, the variable is unset and the fallback `http://localhost:8000` is used — preserving the original behaviour with no changes required.
 
 ---
 
@@ -683,6 +683,25 @@ cd frontend
 npm run dev
 ```
 
+#### Option D — Docker (no local Python or Node.js required)
+
+Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/) to be installed and running.
+
+```bash
+# From the project root — builds images and starts both services
+docker compose up --build
+```
+
+On first run, the backend container automatically seeds all demo user accounts. On subsequent runs it detects the existing database and skips seeding.
+
+```bash
+# Stop all containers (data is preserved in the Docker volume)
+docker compose down
+
+# Stop and wipe all data (fresh start next time)
+docker compose down -v
+```
+
 ### URLs
 
 | Service | URL |
@@ -749,6 +768,29 @@ FRONTEND_URL=http://localhost:5173
 ---
 
 ## 11. Bug Fixes & Change Log
+
+### v1.3.0 — 2026-06-22
+
+#### Feature — Docker Support
+
+**Problem:** Running GetFit required installing Python 3.10+, creating a virtual environment, running `pip install`, installing Node.js 18+, and running `npm install` — a multi-step setup that could fail on different OS environments.
+
+**Solution:** Added a complete Docker setup so the entire app starts with one command on any machine that has Docker Desktop installed.
+
+**Files added:**
+- `backend/Dockerfile` — Python 3.11-slim image; installs dependencies, seeds demo users on first run (conditional on database file absence), starts Uvicorn on port 8000.
+- `backend/.dockerignore` — excludes `venv/`, `.env`, `*.db`, `tests/`, `notebooks/`, and `app/ml/data/` from the image context.
+- `frontend/Dockerfile` — Node 20-slim image; `npm ci` for reproducible installs, Vite dev server bound to `0.0.0.0` so it is reachable from the host browser.
+- `frontend/.dockerignore` — excludes `node_modules/` to prevent Windows-built native binaries entering the Linux container.
+- `docker-compose.yml` (project root) — orchestrates both services on a shared network; mounts a named volume (`getfit_data:/data`) for SQLite persistence; frontend waits for the backend healthcheck before starting.
+
+**Key design decisions:**
+- `SECRET_KEY` and other env vars are injected from `backend/.env` via `env_file` in compose — no secrets are baked into the image.
+- `DATABASE_URL` is overridden to `sqlite:////data/getfit.db` in compose so the database lives in the named volume, separate from the image filesystem.
+- The backend healthcheck polls `GET /health` every 10 seconds; `depends_on: condition: service_healthy` ensures the frontend proxy is not started before the backend is ready.
+- `vite.config.js` proxy target changed from `'http://localhost:8000'` to `process.env.VITE_API_TARGET || 'http://localhost:8000'` — Docker sets `VITE_API_TARGET=http://backend:8000`; local `.bat` dev workflow is unchanged.
+
+---
 
 ### v1.2.0 — 2026-06-21
 
@@ -1225,6 +1267,15 @@ Then restart `start-backend.bat`.
 | joblib | latest | Model serialization (`.pkl`) |
 | scipy | latest | Statistical utilities in EDA notebook |
 
+### Infrastructure
+
+| Technology | Version | Role |
+|---|---|---|
+| Docker | 24+ | Container runtime |
+| Docker Compose | v2 | Multi-container orchestration (`docker compose up`) |
+| python:3.11-slim | — | Backend base image |
+| node:20-slim | — | Frontend base image |
+
 ---
 
 ## 14. Role System & Permissions
@@ -1599,4 +1650,92 @@ def test_register_success(client):
 
 ---
 
-*Documentation last updated: 2026-06-21 — GetFit v1.2.0*
+## 17. Docker Setup
+
+### Architecture
+
+```
+Browser
+  ├── :5173  →  [frontend container — Vite dev server]
+  │                   └── /api/* proxy  →  [backend container — Uvicorn :8000]
+  │                                              └── SQLite at /data/getfit.db
+  │                                                      (named volume: getfit_data)
+  └── :8000  →  [backend container]   (direct API access / Swagger docs)
+```
+
+### Files
+
+| File | Purpose |
+|---|---|
+| `backend/Dockerfile` | Python 3.11-slim image — installs deps, seeds DB on first run, starts Uvicorn |
+| `backend/.dockerignore` | Excludes `venv/`, `.env`, `*.db`, `tests/`, `notebooks/`, `app/ml/data/` |
+| `frontend/Dockerfile` | Node 20-slim image — `npm ci`, Vite dev server on `0.0.0.0:5173` |
+| `frontend/.dockerignore` | Excludes `node_modules/` and `dist/` |
+| `docker-compose.yml` | Orchestrates both services, network, volume, and healthcheck |
+
+### Usage
+
+```bash
+# First-time start (builds images and starts containers)
+docker compose up --build
+
+# Subsequent starts (images already built)
+docker compose up
+
+# Stop containers (database data is preserved)
+docker compose down
+
+# Stop and delete all data (fresh start)
+docker compose down -v
+
+# View live logs from both containers
+docker compose logs -f
+
+# Run the test suite inside the backend container
+docker compose exec backend python -m pytest tests/ -v
+```
+
+### Environment Variables in Docker
+
+The backend container reads all variables from `backend/.env` via the `env_file` directive in `docker-compose.yml`. `DATABASE_URL` is overridden by `docker-compose.yml` to point to the named volume:
+
+| Variable | Docker value | Source |
+|---|---|---|
+| `SECRET_KEY` | From `backend/.env` | `env_file` |
+| `USDA_API_KEY` | From `backend/.env` | `env_file` |
+| `DATABASE_URL` | `sqlite:////data/getfit.db` | `environment` override |
+| `FRONTEND_URL` | `http://localhost:5173` | `env_file` |
+| `VITE_API_TARGET` | `http://backend:8000` | `environment` (frontend only) |
+
+### Database Persistence
+
+The SQLite database is stored in a Docker named volume (`getfit_data`) mounted at `/data` inside the backend container. This means:
+
+- Data survives `docker compose down` and `docker compose up` cycles.
+- Demo users are seeded automatically on the **first** `docker compose up` (when the volume is empty).
+- `docker compose down -v` removes the volume and all data — the next `up` will re-seed.
+
+### Seeded Demo Accounts (auto-created on first run)
+
+| Role | Email | Password |
+|---|---|---|
+| Super-Admin | superadmin@getfit.com | `SuperAdmin@123` |
+| Admin | admin1@getfit.com | `Admin@1234` |
+| Admin | admin2@getfit.com | `Admin@1234` |
+| User | john.doe@example.com | `User@1234` |
+| User | jane.smith@example.com | `User@1234` |
+| User | mike.chen@example.com | `User@1234` |
+| User | priya.patel@example.com | `User@1234` |
+| User | carlos.garcia@example.com | `User@1234` |
+
+### Healthcheck
+
+The backend container exposes `GET /health → { "status": "ok" }`. Docker polls this endpoint every 10 seconds (with a 15-second start-period to allow for DB seeding). The frontend container starts only after the backend passes its healthcheck, preventing proxy errors during cold-start.
+
+### Build Time Note
+
+`backend/requirements.txt` includes `jupyter`, which is not used at runtime but adds significant build time. If a fast build is needed before a demo, remove `jupyter` from `requirements.txt` before running `docker compose up --build` — it has no effect on the running application.
+
+---
+
+*Documentation last updated: 2026-06-22 — GetFit v1.3.0*
