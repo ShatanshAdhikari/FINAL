@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import {
   LayoutDashboard, Dumbbell, Apple, Footprints, User, LogOut, Shield
 } from 'lucide-react';
+import logo from '../assets/logo.png';
 
 const navItems = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -27,16 +28,8 @@ export default function Layout() {
       {/* ── Desktop Sidebar ───────────────────────────────── */}
       <aside className="hidden md:flex w-64 bg-[#111118] border-r border-[#222] flex-col fixed h-full z-10">
         {/* Logo */}
-        <div className="p-6 border-b border-[#222]">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center text-white font-bold text-lg">
-              G
-            </div>
-            <div>
-              <h1 className="text-white font-bold text-lg leading-none">GetFit</h1>
-              <p className="text-gray-500 text-xs">Stay Fit, Stay Strong</p>
-            </div>
-          </div>
+        <div className="p-4 border-b border-[#222] flex items-center justify-center">
+          <img src={logo} alt="GetFit" className="w-48 rounded-xl bg-[#111118] p-2" />
         </div>
 
         {/* Nav */}
