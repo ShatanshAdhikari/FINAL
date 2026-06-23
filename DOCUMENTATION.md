@@ -1,7 +1,8 @@
 # GetFit — System Documentation
 
 > Personalized Fitness & Nutrition Web Application  
-> Stack: React (Vite) · FastAPI · SQLite · Scikit-learn
+> Stack: React (Vite) · FastAPI · SQLite · Scikit-learn  
+> Branch: `feat/improvements` — last updated 2026-06-21
 
 ---
 
@@ -22,6 +23,7 @@
 13. [Technology Stack](#13-technology-stack)
 14. [Role System & Permissions](#14-role-system--permissions)
 15. [API Request & Response Examples](#15-api-request--response-examples)
+16. [Testing](#16-testing)
 
 ---
 
@@ -31,13 +33,14 @@ GetFit is a full-stack fitness and nutrition application that provides:
 
 | Feature | Description |
 |---------|-------------|
-| 🔐 Auth | JWT-based registration & login |
+| 🔐 Auth | JWT-based registration & login with rate limiting |
 | 🏋️ Workout Plans | Rule-based personalized weekly workout generator |
-| 🔥 Calorie Predictor | ML model (Lasso Regression) to predict calories burned |
-| 🥗 Nutrition Tracker | Food logging with macro tracking + Nutritionix API integration |
-| 👟 Step Tracker | Daily step logging with calorie estimation |
-| 📊 Dashboard | Summary of today's activity, nutrition totals, and progress |
+| 🔥 Calorie Predictor | ML model (Lasso Regression) — predicts calories burned with confidence range |
+| 🥗 Nutrition Tracker | Food logging with macro tracking + USDA FoodData Central API |
+| 👟 Step Tracker | Daily step logging with live accelerometer counter |
+| 📊 Dashboard | Summary of today's activity, nutrition totals, and progress charts |
 | 🛡️ Admin Panel | Admin-only user management panel |
+| 🌗 Dark / Light Mode | Toggle persisted in localStorage, applied to all pages |
 
 ---
 
@@ -120,25 +123,45 @@ GetFit is a full-stack fitness and nutrition application that provides:
 ```
 frontend/
 ├── src/
-│   ├── main.jsx              # React entry point
-│   ├── App.jsx               # Router + route guards
+│   ├── main.jsx              # React entry point; applies saved theme class before render
+│   ├── App.jsx               # Router + route guards + ErrorBoundary wrappers
+│   ├── index.css             # Tailwind import + CSS custom properties for theming
 │   ├── api/
 │   │   └── axios.js          # Axios instance (base URL, auth headers, 401 handler)
 │   ├── context/
-│   │   └── AuthContext.jsx   # Global auth state (user, token, login, logout)
+│   │   ├── AuthContext.jsx   # Global auth state (user, token, login, logout)
+│   │   └── ThemeContext.jsx  # Dark/light theme state + toggle (localStorage-backed)
 │   ├── components/
-│   │   └── Layout.jsx        # Sidebar nav + Outlet wrapper
+│   │   ├── Layout.jsx        # Sidebar nav + Outlet wrapper + Sun/Moon toggle button
+│   │   ├── ErrorBoundary.jsx # Class component — catches render errors, shows fallback UI
+│   │   └── Skeleton.jsx      # Animated placeholder components (Skeleton, CardSkeleton, etc.)
 │   └── pages/
 │       ├── Login.jsx         # Login form
 │       ├── Register.jsx      # Registration form
-│       ├── Onboarding.jsx    # First-time profile setup
-│       ├── Dashboard.jsx     # Activity summary + charts
-│       ├── WorkoutPlan.jsx   # Weekly workout plan viewer
-│       ├── CalorieTracker.jsx# Food search + macro logging
-│       ├── StepTracker.jsx   # Daily step input + history
+│       ├── Onboarding.jsx    # First-time profile setup (3-step wizard)
+│       ├── Dashboard.jsx     # Activity summary + charts + weight logging
+│       ├── WorkoutPlan.jsx   # Weekly workout plan + calorie predictor + log history
+│       ├── CalorieTracker.jsx# Food search + gram input + macro logging
+│       ├── StepTracker.jsx   # Daily step input + live accelerometer + history
 │       ├── Profile.jsx       # Edit profile & view nutrition plan
 │       └── AdminPanel.jsx    # Admin-only user table
 ```
+
+### Theming
+
+All background, border, and primary text colours are driven by CSS custom properties defined in `index.css`. Adding `dark` or `light` to `<html>` switches the full theme:
+
+| CSS Variable | Dark | Light |
+|---|---|---|
+| `--bg-base` | `#0f0f0f` | `#f3f4f6` |
+| `--bg-surface` | `#111118` | `#ffffff` |
+| `--bg-nested` | `#1a1a24` | `#f1f5f9` |
+| `--bg-muted` | `#222222` | `#e5e7eb` |
+| `--border` | `#222222` | `#e5e7eb` |
+| `--border-input` | `#333333` | `#d1d5db` |
+| `--text-primary` | `#ffffff` | `#111827` |
+
+`ThemeContext` reads the preference from `localStorage` on mount. `main.jsx` applies the class to `<html>` before React renders to prevent a flash of the wrong theme.
 
 ### Route Guards
 
@@ -199,31 +222,37 @@ if (error.response?.status === 401 && !isAuthEndpoint) {
 ```
 backend/
 ├── app/
-│   ├── main.py               # FastAPI app, CORS config, route registration
+│   ├── main.py               # FastAPI app, CORS, rate-limiter setup, route registration
 │   ├── core/
-│   │   ├── config.py         # Settings (JWT secret, DB URL, Nutritionix keys)
+│   │   ├── config.py         # Settings (JWT secret, DB URL, USDA/Nutritionix keys)
 │   │   ├── database.py       # SQLAlchemy engine, session, Base
 │   │   └── security.py       # bcrypt hashing (direct), JWT create/decode
 │   ├── models/
 │   │   ├── user.py           # User model (profile + auth fields, roles)
-│   │   └── logs.py           # CalorieLog, WorkoutLog, StepLog models
+│   │   └── logs.py           # CalorieLog, WorkoutLog, StepLog, WeightLog + indexes
 │   ├── routes/
-│   │   ├── auth.py           # POST /auth/register, /auth/login, GET /auth/me
-│   │   ├── profile.py        # GET/PUT /profile, GET /profile/nutrition-plan
-│   │   ├── workout.py        # GET /workout/plan, POST /workout/log, predict-calories
-│   │   ├── nutrition.py      # POST /nutrition/search, /nutrition/log, GET logs
-│   │   ├── steps.py          # POST /steps/log, GET /steps/today, /steps/history
-│   │   └── admin.py          # Admin & super-admin endpoints
+│   │   ├── auth.py           # /auth/register, /auth/login (rate-limited), /auth/me
+│   │   ├── profile.py        # PUT /profile, GET /profile/nutrition-plan, weight logging
+│   │   ├── workout.py        # /workout/plan, /workout/log, /workout/logs, predict-calories
+│   │   ├── nutrition.py      # /nutrition/search (USDA), /nutrition/log, logs, delete
+│   │   ├── steps.py          # /steps/log, /steps/today, /steps/history
+│   │   └── admin.py          # Admin & super-admin endpoints + ML retrain
 │   ├── services/
 │   │   ├── workout_recommender.py  # Rule-based workout plan generator
-│   │   └── nutrition_calculator.py # BMR/TDEE/macro calculator
+│   │   └── nutrition_calculator.py # BMR/TDEE/macro calculator (Mifflin-St Jeor)
 │   └── ml/
-│       ├── calorie_predictor.py    # Lasso Regression model
+│       ├── calorie_predictor.py    # Lasso Regression pipeline; returns confidence range
 │       └── calorie_model.pkl       # Saved model (auto-generated on first run)
+├── tests/                    # pytest test suite (50 tests)
+│   ├── conftest.py           # In-memory SQLite (StaticPool) + TestClient fixture
+│   ├── test_auth.py          # Registration, login, /auth/me
+│   ├── test_nutrition_calculator.py # BMR, TDEE, macros, step calories
+│   ├── test_calorie_predictor.py    # Model inference, confidence range
+│   └── test_workout_recommender.py  # Plan generation, splits, determinism
 ├── seed_users.py             # One-shot database seeder (1 super-admin, 2 admins, 5 users)
 ├── create_admin.py           # CLI to create or promote admin accounts
-├── requirements.txt
-└── .env                      # Local environment variables (optional)
+├── requirements.txt          # Includes slowapi, pytest, httpx
+└── .env.example              # Template — copy to .env and fill in values (never commit .env)
 ```
 
 ### Password Hashing — `security.py`
@@ -288,18 +317,21 @@ def get_password_hash(password: str) -> str:
 └──────────────────────────┘
 
           │ 1 (users)
-          ▼ many
-┌──────────────────────────┐
-│        step_logs         │
-├──────────────┬───────────┤
-│ id           │ INT (PK)  │
-│ user_id      │ FK→users  │
-│ steps        │ INTEGER   │
-│ calories_from│ FLOAT     │
-│ date         │ STRING    │
-│              │ (YYYY-MM) │
+          ├───────────────────────────────────────────┐
+          ▼ many                                      ▼ many
+┌──────────────────────────┐          ┌───────────────────────────┐
+│        step_logs         │          │       weight_logs          │
+├──────────────┬───────────┤          ├──────────────┬────────────┤
+│ id           │ INT (PK)  │          │ id           │ INT (PK)   │
+│ user_id      │ FK→users  │          │ user_id      │ FK→users   │
+│ steps        │ INTEGER   │          │ weight       │ FLOAT (kg) │
+│ calories_from│ FLOAT     │          │ date         │ STRING     │
+│ date         │ STRING    │          │ logged_at    │ DATETIME   │
+│              │ (YYYY-MM) │          └───────────────────────────┘
 └──────────────────────────┘
 ```
+
+> **Indexes:** All log tables have `Index` definitions on `user_id` and `logged_at`/`date` to keep queries fast as data grows.
 
 ---
 
@@ -312,8 +344,8 @@ Interactive Docs: `http://localhost:8000/docs`
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| POST | `/auth/register` | ❌ | Register new user, returns JWT token |
-| POST | `/auth/login` | ❌ | Login (email or username + password), returns JWT token |
+| POST | `/auth/register` | ❌ | Register new user, returns JWT token. **Rate limited: 10/min per IP.** |
+| POST | `/auth/login` | ❌ | Login (email or username + password), returns JWT token. **Rate limited: 10/min per IP.** |
 | GET | `/auth/me` | ✅ | Get current user details |
 
 ### Profile — `/profile`
@@ -323,14 +355,22 @@ Interactive Docs: `http://localhost:8000/docs`
 | PUT | `/profile` | ✅ | Update profile (weight, height, goal, etc.) |
 | GET | `/profile/nutrition-plan` | ✅ | Calculate BMR/TDEE/macros from saved profile |
 
+### Profile — additional endpoints
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/profile/weight` | ✅ | Log today's weight (upserts by date) |
+| GET | `/profile/weight-history?days=90` | ✅ | Weight log history |
+
 ### Workout — `/workout`
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
 | GET | `/workout/plan` | ✅ | Generate personalised weekly workout plan |
-| POST | `/workout/predict-calories` | ✅ | Predict calories burned (ML model) |
+| POST | `/workout/predict-calories` | ✅ | Predict calories burned — returns point + confidence range |
 | POST | `/workout/log` | ✅ | Log a completed workout session |
-| GET | `/workout/logs` | ✅ | Get last 50 workout logs |
+| GET | `/workout/logs?skip=0&limit=20` | ✅ | Paginated workout log history (max 100 per request) |
+| DELETE | `/workout/log/{id}` | ✅ | Delete a specific workout log entry |
 
 ### Nutrition — `/nutrition`
 
@@ -392,7 +432,14 @@ Input Features → StandardScaler → PolynomialFeatures(degree=3) → Lasso(alp
 | heart_rate | float | Heart rate in BPM |
 | body_temp | float | Body temperature in °C (default 37.5) |
 
-**Lifecycle:** Model is trained on first startup using synthetic physiological data and saved to `calorie_model.pkl`. In production, replace with the real Kaggle dataset.
+**Output:** The predictor returns a point estimate plus a ±2σ confidence interval derived from the model's RMSE (0.30 cal):
+```json
+{ "calories": 334.17, "confidence_low": 333.57, "confidence_high": 334.77 }
+```
+
+**Performance (EDA notebook):** R² = 0.9999, MAE = 0.26 cal, RMSE = 0.30 cal on the 15,000-sample Kaggle dataset.
+
+**Lifecycle:** Model is trained on first startup and saved to `calorie_model.pkl`. Falls back to synthetic data with a warning if the real dataset is not present in `backend/app/ml/data/`.
 
 ---
 
@@ -660,34 +707,171 @@ Run `venv\Scripts\python seed_users.py` to populate these accounts:
 | User | `priya_patel` | priya.patel@example.com | `User@1234` |
 | User | `carlos_garcia` | carlos.garcia@example.com | `User@1234` |
 
-### Environment Variables (optional)
+### Environment Variables
 
-Create `backend/.env` to override defaults:
+`backend/.env` is **not committed to git** — copy `backend/.env.example` and fill in your values:
+
+```bash
+cp backend/.env.example backend/.env
+```
 
 ```env
-SECRET_KEY=your-secret-key-here
+# Generate with: python -c "import secrets; print(secrets.token_hex(32))"
+SECRET_KEY=your-generated-secret-key-here
+
 DATABASE_URL=sqlite:///./getfit.db
 ACCESS_TOKEN_EXPIRE_MINUTES=1440
-NUTRITIONIX_APP_ID=your-app-id
-NUTRITIONIX_API_KEY=your-api-key
+
+# USDA FoodData Central (free, no signup for DEMO_KEY)
+# Get a personal key at https://fdc.nal.usda.gov/api-guide.html for higher rate limits
+USDA_API_KEY=DEMO_KEY
+
+# Optional: Nutritionix (premium, richer NLP search). Leave blank to use USDA.
+NUTRITIONIX_APP_ID=
+NUTRITIONIX_API_KEY=
+
 FRONTEND_URL=http://localhost:5173
 ```
 
 | Variable | Default | Required | Description |
 |---|---|:---:|---|
-| `SECRET_KEY` | `getfit-super-secret-key-...` | **Yes** | JWT signing secret — change before any deployment |
+| `SECRET_KEY` | *(none — must be set)* | **Yes** | JWT signing secret. App refuses to start if missing. Generate with `secrets.token_hex(32)`. |
 | `ALGORITHM` | `HS256` | No | JWT signing algorithm |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | `1440` (24 h) | No | Token lifetime in minutes |
 | `DATABASE_URL` | `sqlite:///./getfit.db` | No | SQLAlchemy database URL |
-| `NUTRITIONIX_APP_ID` | *(empty)* | No | Nutritionix App ID — leave blank for mock food data |
+| `USDA_API_KEY` | `DEMO_KEY` | No | USDA FoodData Central key — `DEMO_KEY` allows 30 req/hour |
+| `NUTRITIONIX_APP_ID` | *(empty)* | No | If set alongside `NUTRITIONIX_API_KEY`, Nutritionix is used instead of USDA |
 | `NUTRITIONIX_API_KEY` | *(empty)* | No | Nutritionix API key |
 | `FRONTEND_URL` | `http://localhost:5173` | No | Allowed CORS origin |
 
-> Free Nutritionix keys: [nutritionix.com/business/api](https://www.nutritionix.com/business/api)
+> ⚠️ **Never commit `.env`** — it is listed in `.gitignore`. Use `.env.example` as a safe template for other contributors.
 
 ---
 
 ## 11. Bug Fixes & Change Log
+
+### v1.2.0 — 2026-06-21
+
+#### Security — Credential Exposure in Git History
+
+**Problem:** `backend/.env` (containing real `SECRET_KEY` and `USDA_API_KEY` values) was tracked by git and committed to the repository. Anyone with repo read access could use these values to forge JWT tokens or exhaust the USDA API quota.
+
+**Fix:**
+- Added root `.gitignore` that excludes `.env`, `__pycache__/`, `*.pkl`, `*.db`, `*.log`, `venv/`, and `node_modules/`
+- Removed `backend/.env` from git tracking via `git rm --cached`
+- Generated a new `SECRET_KEY` via `secrets.token_hex(32)`
+- Restored `backend/.env.example` with placeholder values and generation instructions
+
+**Files:** `.gitignore`, `backend/.env.example`
+
+---
+
+#### Security — Rate Limiting on Auth Endpoints
+
+**Problem:** `/auth/login` and `/auth/register` had no brute-force protection — an attacker could make unlimited login attempts.
+
+**Fix:** Added `slowapi` middleware. Both endpoints are capped at **10 requests/minute per IP**. Exceeding the limit returns `429 Too Many Requests`.
+
+**Files:** `backend/app/main.py`, `backend/app/routes/auth.py`, `backend/requirements.txt`
+
+---
+
+#### Feature — DELETE /workout/log/{id}
+
+**Problem:** The README listed `DELETE /workout/log/{id}` but the endpoint was never implemented. Users could log workouts but had no way to remove them.
+
+**Fix:** Added the handler to `workout.py` (same ownership check as `DELETE /nutrition/log/{id}`). Wired up a trash icon button in `WorkoutPlan.jsx`.
+
+**Files:** `backend/app/routes/workout.py`, `frontend/src/pages/WorkoutPlan.jsx`
+
+---
+
+#### Feature — Pydantic Input Validation with Bounds
+
+**Problem:** Routes accepted physically impossible values — negative ages, zero weights, heart rates of 999 BPM.
+
+**Fix:** Added `Field(ge=..., le=...)` constraints to all numeric fields and a `pattern=` regex for date strings:
+
+| Field | Range |
+|---|---|
+| age | 10 – 120 |
+| weight | 20 – 500 kg |
+| height | 50 – 300 cm |
+| heart_rate | 30 – 250 BPM |
+| duration_minutes | 1 – 600 min |
+| steps | 0 – 100,000 |
+| date | `YYYY-MM-DD` regex |
+
+Invalid requests now return `422 Unprocessable Entity` with a clear field-level error message.
+
+**Files:** `backend/app/routes/profile.py`, `backend/app/routes/workout.py`, `backend/app/routes/steps.py`
+
+---
+
+#### Feature — Paginated Workout Logs
+
+**Problem:** `GET /workout/logs` was hardcoded to `.limit(50)` with no way to fetch older entries.
+
+**Fix:** Added `?skip=0&limit=20` query parameters. `limit` is capped server-side at 100 to prevent abuse.
+
+**Files:** `backend/app/routes/workout.py`
+
+---
+
+#### Feature — Calorie Predictor Confidence Range
+
+**Problem:** The calorie predictor returned a bare float with no indication of how accurate the estimate was.
+
+**Fix:** The endpoint now returns `{ "predicted_calories_burned": float, "confidence_low": float, "confidence_high": float }`. The range is ±2σ around the point estimate, derived from the model's RMSE of 0.30 cal. The frontend displays this as e.g. `"47 kcal (46–48 kcal range)"`.
+
+**Files:** `backend/app/ml/calorie_predictor.py`, `backend/app/routes/workout.py`, `frontend/src/pages/WorkoutPlan.jsx`
+
+---
+
+#### Feature — Database Indexes
+
+**Problem:** No indexes existed on frequently queried columns — queries would table-scan as data grew.
+
+**Fix:** Added `Index` definitions on `user_id` and `logged_at`/`date` for `CalorieLog`, `WorkoutLog`, `StepLog`, and `WeightLog`.
+
+**Files:** `backend/app/models/logs.py`
+
+---
+
+#### Feature — Dark / Light Mode Toggle
+
+**Problem:** The app was forced dark with no way for users to switch to a light theme.
+
+**Fix:**
+- Added `ThemeContext.jsx` — stores preference in `localStorage`, applies `dark` or `light` class to `<html>`
+- `main.jsx` applies the class synchronously before React renders to avoid a flash
+- Sun/Moon toggle button added to desktop sidebar footer and mobile bottom nav
+- All hardcoded hex colour classes (`bg-[#111118]`, `border-[#222]`, `text-white`, etc.) replaced with CSS custom property references (`bg-[var(--bg-surface)]`, etc.) across all 9 page files, Layout, and shared components
+- Recharts tooltip inline styles and SVG stroke colours are also theme-aware
+
+**Files:** `frontend/src/context/ThemeContext.jsx` (new), `frontend/src/index.css`, `frontend/src/main.jsx`, `frontend/src/components/Layout.jsx`, all page files
+
+---
+
+#### Feature — Error Boundaries
+
+**Problem:** Any unhandled JavaScript render error crashed the entire app with a blank screen.
+
+**Fix:** New `ErrorBoundary` class component wraps every protected route. On error, it shows a friendly card with a "Try again" button that resets the error state.
+
+**Files:** `frontend/src/components/ErrorBoundary.jsx` (new), `frontend/src/App.jsx`
+
+---
+
+#### Feature — Loading Skeletons
+
+**Problem:** Pages displayed a plain `"Loading..."` text string while data was fetching.
+
+**Fix:** New `Skeleton`, `CardSkeleton`, `StatSkeleton`, and `ListSkeleton` components render animated grey placeholder bars in the shape of the real content.
+
+**Files:** `frontend/src/components/Skeleton.jsx` (new), `frontend/src/pages/Dashboard.jsx`, `frontend/src/pages/WorkoutPlan.jsx`
+
+---
 
 ### v1.1.0 — 2026-05-26
 
@@ -1006,35 +1190,40 @@ Then restart `start-backend.bat`.
 |---|---|---|
 | React | 19.2.6 | UI component framework |
 | Vite | 8.0.12 | Dev server, HMR, bundler |
-| TailwindCSS | 4.3.0 | Utility-first CSS (dark theme) |
+| TailwindCSS | 4.3.0 | Utility-first CSS with CSS custom property theming |
 | React Router DOM | 7.15.1 | Client-side SPA routing |
 | Axios | 1.16.1 | HTTP client with interceptors |
-| Recharts | 3.8.1 | Area, Bar, and Pie charts |
+| Recharts | 3.8.1 | Area, Bar, Pie, and Line charts |
 | Lucide React | 1.16.0 | SVG icon library |
 | React Hot Toast | 2.6.0 | Toast notifications |
-| React Context API | built-in | Auth state management (no Redux) |
+| React Context API | built-in | Auth + Theme state management (no Redux) |
 
 ### Backend
 
 | Technology | Version | Role |
 |---|---|---|
-| Python | 3.9+ | Runtime |
+| Python | 3.10+ | Runtime |
 | FastAPI | latest | REST API framework, auto OpenAPI docs |
 | Uvicorn | latest | ASGI server (with `--reload`) |
-| SQLAlchemy | latest | ORM — models, sessions, migrations |
+| SQLAlchemy | latest | ORM — models, sessions, indexes |
 | SQLite | built-in | File-based relational database (`getfit.db`) |
 | python-jose | latest | JWT encode/decode (HS256) |
 | bcrypt | 4.0.1 | Password hashing (pinned — see §11 Fix 1) |
 | pydantic-settings | latest | `.env` configuration with type validation |
-| requests | latest | Outbound HTTP (Nutritionix API) |
+| slowapi | latest | Rate limiting middleware for FastAPI |
+| requests | latest | Outbound HTTP (USDA / Nutritionix API) |
+| pytest | latest | Test runner |
+| httpx | latest | Async HTTP client used by FastAPI TestClient |
 
 ### Machine Learning
 
 | Technology | Version | Role |
 |---|---|---|
-| scikit-learn | latest | Lasso Regression pipeline |
+| scikit-learn | latest | Lasso Regression pipeline (StandardScaler → PolynomialFeatures → Lasso) |
 | NumPy | latest | Array operations for model inference |
+| pandas | latest | Data loading and preprocessing |
 | joblib | latest | Model serialization (`.pkl`) |
+| scipy | latest | Statistical utilities in EDA notebook |
 
 ---
 
@@ -1214,12 +1403,18 @@ username=jane_smith&password=Secret@123
 }
 ```
 
+**Validation bounds:** `duration_minutes` 1–600, `heart_rate` 30–250, `body_temp` 35.0–43.0.
+
 **Response `200`:**
 ```json
 {
-  "predicted_calories_burned": 334.17
+  "predicted_calories_burned": 334.17,
+  "confidence_low": 333.57,
+  "confidence_high": 334.77
 }
 ```
+
+The `confidence_low` / `confidence_high` fields represent a ±2σ interval around the point estimate, based on the model's RMSE of 0.30 cal.
 
 ---
 
@@ -1306,6 +1501,35 @@ username=jane_smith&password=Secret@123
 
 ---
 
+### `DELETE /workout/log/{id}`
+
+**Response `200`:** `{ "message": "Workout log deleted" }`  
+**Error `404`:** `{ "detail": "Workout log not found" }` (also returned if the log belongs to a different user)
+
+---
+
+### `GET /workout/logs?skip=0&limit=20`
+
+**Response `200`:** Array of workout log objects, ordered most-recent first.
+
+```json
+[
+  {
+    "id": 12,
+    "exercise_name": "Running",
+    "duration_minutes": 30.0,
+    "sets": null,
+    "reps": null,
+    "heart_rate": 155.0,
+    "calories_burned": 290.0,
+    "notes": "5K in 28 min",
+    "logged_at": "2026-06-21T09:15:00"
+  }
+]
+```
+
+---
+
 ### `GET /admin/stats`
 
 **Response `200`:**
@@ -1323,4 +1547,56 @@ username=jane_smith&password=Secret@123
 
 ---
 
-*Documentation last updated: 2026-05-25 — GetFit v1.0.1*
+---
+
+## 16. Testing
+
+### Running the Test Suite
+
+```bash
+cd backend
+venv\Scripts\python.exe -m pytest tests/ -v
+```
+
+All 50 tests run against an in-memory SQLite database — no backend server needed.
+
+### Test Architecture
+
+`tests/conftest.py` sets up the test environment:
+
+1. Sets `DATABASE_URL=sqlite://` and `SECRET_KEY` via `os.environ` before any app import
+2. Replaces `app.core.database.engine` with a `StaticPool` engine — all connections share one in-memory SQLite database, so tables created by `main.py` on import are visible to test sessions
+3. Provides a `client` fixture that overrides FastAPI's `get_db` dependency and wraps the app in `TestClient`
+
+### Test Files
+
+| File | Tests | What's covered |
+|---|---|---|
+| `test_auth.py` | 9 | Register success, duplicate email/username, login by email and username, wrong password, `/auth/me` with and without token |
+| `test_nutrition_calculator.py` | 16 | BMR formula (male/female), TDEE multipliers, calorie goal adjustments, macro splits, step calorie formula, full plan structure |
+| `test_calorie_predictor.py` | 8 | Model loads, returns positive float, confidence range shape, monotonicity (longer duration → more calories, higher HR → more calories), gender case-insensitivity, minimum clamp at 1.0 |
+| `test_workout_recommender.py` | 10 | Correct day count, non-empty exercises, required keys (name/sets/reps), all fitness levels, all goals, determinism per user/week, full-body split for ≤3 days, upper/lower split for 4 days |
+
+### Adding New Tests
+
+Follow the existing pattern — import the function under test directly; use the `client` fixture for HTTP endpoint tests:
+
+```python
+# Unit test (no HTTP)
+from app.services.nutrition_calculator import calculate_bmr
+
+def test_male_bmr():
+    assert abs(calculate_bmr("male", 70, 175, 30) - 1648.75) < 0.01
+
+# Endpoint test
+def test_register_success(client):
+    res = client.post("/auth/register", json={
+        "email": "test@example.com", "username": "testuser", "password": "pass"
+    })
+    assert res.status_code == 200
+    assert "access_token" in res.json()
+```
+
+---
+
+*Documentation last updated: 2026-06-21 — GetFit v1.2.0*

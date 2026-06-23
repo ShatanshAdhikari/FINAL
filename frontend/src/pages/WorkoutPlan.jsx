@@ -3,11 +3,12 @@ import { Link } from 'react-router-dom';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
-import { Dumbbell, Zap, Clock, ChevronDown, ChevronUp, Activity } from 'lucide-react';
+import { Dumbbell, Zap, Clock, ChevronDown, ChevronUp, Activity, Trash2 } from 'lucide-react';
+import { CardSkeleton } from '../components/Skeleton';
 
 function CaloriePredictor({ user }) {
   const [predForm, setPredForm] = useState({ duration_minutes: '', heart_rate: '' });
-  const [prediction, setPrediction] = useState(null);
+  const [prediction, setPrediction] = useState(null); // { calories, low, high }
   const [predLoading, setPredLoading] = useState(false);
 
   const missingFields = ['gender', 'age', 'weight', 'height'].filter(f => !user?.[f]);
@@ -24,7 +25,11 @@ function CaloriePredictor({ user }) {
         duration_minutes: parseFloat(predForm.duration_minutes),
         heart_rate: parseFloat(predForm.heart_rate),
       });
-      setPrediction(res.data.predicted_calories_burned);
+      setPrediction({
+        calories: res.data.predicted_calories_burned,
+        low: res.data.confidence_low,
+        high: res.data.confidence_high,
+      });
     } catch (e) {
       toast.error(e.response?.data?.detail || 'Prediction failed');
     } finally {
@@ -33,8 +38,8 @@ function CaloriePredictor({ user }) {
   };
 
   return (
-    <div className="bg-[#111118] rounded-2xl border border-[#222] p-6">
-      <h2 className="text-white font-semibold mb-1 flex items-center gap-2">
+    <div className="bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] p-6">
+      <h2 className="text-[var(--text-primary)] font-semibold mb-1 flex items-center gap-2">
         <Zap size={18} className="text-yellow-400" /> Calorie Burn Predictor (ML Model)
       </h2>
       <p className="text-gray-400 text-xs mb-4">Uses Lasso Regression (degree 3) to predict calories burned based on heart rate</p>
@@ -45,7 +50,7 @@ function CaloriePredictor({ user }) {
           <div className="text-xs">
             <span className="text-yellow-400 font-medium">Profile incomplete. </span>
             <span className="text-gray-400">
-              Missing: <span className="text-white">{missingFields.join(', ')}</span>.{' '}
+              Missing: <span className="text-[var(--text-primary)]">{missingFields.join(', ')}</span>.{' '}
             </span>
             <Link to="/profile" className="text-yellow-400 underline hover:text-yellow-300">
               Update profile →
@@ -61,7 +66,7 @@ function CaloriePredictor({ user }) {
             type="number"
             value={predForm.duration_minutes}
             onChange={(e) => setPredForm({ ...predForm, duration_minutes: e.target.value })}
-            className="w-full bg-[#1a1a24] border border-[#333] rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-yellow-500 disabled:opacity-40"
+            className="w-full bg-[var(--bg-nested)] border border-[var(--border-input)] rounded-xl px-3 py-2 text-[var(--text-primary)] text-sm focus:outline-none focus:border-yellow-500 disabled:opacity-40"
             placeholder="30"
             disabled={!canPredict}
           />
@@ -72,7 +77,7 @@ function CaloriePredictor({ user }) {
             type="number"
             value={predForm.heart_rate}
             onChange={(e) => setPredForm({ ...predForm, heart_rate: e.target.value })}
-            className="w-full bg-[#1a1a24] border border-[#333] rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-yellow-500 disabled:opacity-40"
+            className="w-full bg-[var(--bg-nested)] border border-[var(--border-input)] rounded-xl px-3 py-2 text-[var(--text-primary)] text-sm focus:outline-none focus:border-yellow-500 disabled:opacity-40"
             placeholder="140"
             disabled={!canPredict}
           />
@@ -90,8 +95,13 @@ function CaloriePredictor({ user }) {
 
       {prediction !== null && (
         <div className="mt-4 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl">
-          <div className="text-yellow-400 font-bold text-2xl">{Math.round(prediction)} kcal</div>
-          <div className="text-gray-400 text-xs mt-1">Estimated calories burned</div>
+          <div className="text-yellow-400 font-bold text-2xl">{Math.round(prediction.calories)} kcal</div>
+          <div className="text-gray-400 text-xs mt-1">
+            Estimated calories burned
+            <span className="ml-2 text-gray-500">
+              ({Math.round(prediction.low)}–{Math.round(prediction.high)} kcal range)
+            </span>
+          </div>
         </div>
       )}
     </div>
@@ -131,6 +141,16 @@ export default function WorkoutPlan() {
     void fetchLogs();
   }, [fetchPlan, fetchLogs]);
 
+  const deleteLog = async (id) => {
+    try {
+      await api.delete(`/workout/log/${id}`);
+      setLogs(prev => prev.filter(l => l.id !== id));
+      toast.success('Workout removed');
+    } catch {
+      toast.error('Failed to delete workout');
+    }
+  };
+
   const logWorkout = async () => {
     if (!logForm.exercise_name || !logForm.duration_minutes) {
       toast.error('Exercise name and duration are required');
@@ -160,12 +180,17 @@ export default function WorkoutPlan() {
     endurance: 'text-green-400 bg-green-400/10',
   };
 
-  if (loading) return <div className="text-gray-400 text-center py-20">Loading your workout plan...</div>;
+  if (loading) return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-3 gap-3"><CardSkeleton /><CardSkeleton /><CardSkeleton /></div>
+      <CardSkeleton />
+    </div>
+  );
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-white">Your Workout Plan</h1>
+        <h1 className="text-2xl font-bold text-[var(--text-primary)]">Your Workout Plan</h1>
         <p className="text-gray-400 text-sm mt-1">Personalized rule-based weekly routine</p>
       </div>
 
@@ -176,22 +201,22 @@ export default function WorkoutPlan() {
             { label: 'Level', value: plan.fitness_level.charAt(0).toUpperCase() + plan.fitness_level.slice(1) },
             { label: 'Days/Week', value: plan.days_per_week },
           ].map(s => (
-            <div key={s.label} className="bg-[#111118] border border-[#222] rounded-xl p-4 text-center">
+            <div key={s.label} className="bg-[var(--bg-surface)] border border-[var(--border)] rounded-xl p-4 text-center">
               <div className="text-gray-400 text-xs mb-1">{s.label}</div>
-              <div className="text-white font-bold">{s.value}</div>
+              <div className="text-[var(--text-primary)] font-bold">{s.value}</div>
             </div>
           ))}
         </div>
       )}
 
       {plan ? (
-        <div className="bg-[#111118] rounded-2xl border border-[#222] p-6">
-          <h2 className="text-white font-semibold mb-4 flex items-center gap-2">
+        <div className="bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] p-6">
+          <h2 className="text-[var(--text-primary)] font-semibold mb-4 flex items-center gap-2">
             <Dumbbell size={18} className="text-orange-400" /> Weekly Schedule
           </h2>
           <div className="space-y-3">
             {Object.entries(plan.weekly_plan).map(([day, data]) => (
-              <div key={day} className="border border-[#2a2a2a] rounded-xl overflow-hidden">
+              <div key={day} className="border border-[var(--border-subtle)] rounded-xl overflow-hidden">
                 <button
                   onClick={() => setExpandedDay(expandedDay === day ? null : day)}
                   className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition-colors"
@@ -206,11 +231,11 @@ export default function WorkoutPlan() {
                   {expandedDay === day ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
                 </button>
                 {expandedDay === day && (
-                  <div className="border-t border-[#2a2a2a] p-4 space-y-3">
+                  <div className="border-t border-[var(--border-subtle)] p-4 space-y-3">
                     {data.exercises.map((ex, i) => (
-                      <div key={i} className="flex items-start justify-between bg-[#1a1a24] rounded-xl p-3">
+                      <div key={i} className="flex items-start justify-between bg-[var(--bg-nested)] rounded-xl p-3">
                         <div>
-                          <div className="text-white font-medium text-sm">{ex.name}</div>
+                          <div className="text-[var(--text-primary)] font-medium text-sm">{ex.name}</div>
                           <div className="text-gray-500 text-xs mt-1">{ex.muscles}</div>
                         </div>
                         <div className="text-right text-xs space-y-1">
@@ -229,7 +254,7 @@ export default function WorkoutPlan() {
           </div>
         </div>
       ) : (
-        <div className="bg-[#111118] rounded-2xl border border-[#222] p-12 text-center">
+        <div className="bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] p-12 text-center">
           <Dumbbell size={48} className="text-gray-600 mx-auto mb-4" />
           <p className="text-gray-400">Complete your profile to generate a workout plan</p>
         </div>
@@ -237,8 +262,8 @@ export default function WorkoutPlan() {
 
       <CaloriePredictor user={user} />
 
-      <div className="bg-[#111118] rounded-2xl border border-[#222] p-6">
-        <h2 className="text-white font-semibold mb-4 flex items-center gap-2">
+      <div className="bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] p-6">
+        <h2 className="text-[var(--text-primary)] font-semibold mb-4 flex items-center gap-2">
           <Activity size={18} className="text-green-400" /> Log Workout
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-3">
@@ -256,7 +281,7 @@ export default function WorkoutPlan() {
                 type={f.type || 'text'}
                 value={logForm[f.key]}
                 onChange={(e) => setLogForm({ ...logForm, [f.key]: e.target.value })}
-                className="w-full bg-[#1a1a24] border border-[#333] rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-green-500"
+                className="w-full bg-[var(--bg-nested)] border border-[var(--border-input)] rounded-xl px-3 py-2 text-[var(--text-primary)] text-sm focus:outline-none focus:border-green-500"
                 placeholder={f.placeholder}
               />
             </div>
@@ -273,17 +298,26 @@ export default function WorkoutPlan() {
           <div className="mt-4 space-y-2">
             <div className="text-gray-400 text-xs font-medium mb-2">Recent Workouts</div>
             {logs.slice(0, 5).map(log => (
-              <div key={log.id} className="flex items-center justify-between bg-[#1a1a24] rounded-xl px-4 py-3 text-sm">
+              <div key={log.id} className="flex items-center justify-between bg-[var(--bg-nested)] rounded-xl px-4 py-3 text-sm">
                 <div>
-                  <span className="text-white font-medium">{log.exercise_name}</span>
+                  <span className="text-[var(--text-primary)] font-medium">{log.exercise_name}</span>
                   <span className="text-gray-500 ml-2">{log.duration_minutes} min</span>
                   {log.sets && log.reps && (
                     <span className="text-gray-500 ml-2 text-xs">{log.sets}×{log.reps}</span>
                   )}
                 </div>
-                <div className="text-right">
-                  {log.calories_burned && <span className="text-orange-400 text-xs">{log.calories_burned} kcal</span>}
-                  <div className="text-gray-600 text-xs">{new Date(log.logged_at).toLocaleDateString()}</div>
+                <div className="flex items-center gap-3">
+                  <div className="text-right">
+                    {log.calories_burned && <span className="text-orange-400 text-xs">{log.calories_burned} kcal</span>}
+                    <div className="text-gray-600 text-xs">{new Date(log.logged_at).toLocaleDateString()}</div>
+                  </div>
+                  <button
+                    onClick={() => deleteLog(log.id)}
+                    aria-label="Delete workout log"
+                    className="text-gray-600 hover:text-red-400 transition-colors p-1"
+                  >
+                    <Trash2 size={14} />
+                  </button>
                 </div>
               </div>
             ))}

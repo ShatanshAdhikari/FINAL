@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from datetime import datetime, timedelta, timezone
 from app.core.database import get_db
 from app.routes.auth import get_current_user
@@ -12,8 +12,8 @@ router = APIRouter(prefix="/steps", tags=["Steps"])
 
 
 class StepLogCreate(BaseModel):
-    steps: int
-    date: str  # YYYY-MM-DD
+    steps: int = Field(..., ge=0, le=100_000)
+    date: str = Field(..., pattern=r"^\d{4}-\d{2}-\d{2}$")
 
 
 @router.post("/log")

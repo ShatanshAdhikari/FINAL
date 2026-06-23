@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING, Optional
-from sqlalchemy import Integer, String, Float, DateTime, ForeignKey, Text
+from sqlalchemy import Integer, String, Float, DateTime, ForeignKey, Text, Index
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from datetime import datetime, timezone
 from app.core.database import Base
@@ -11,6 +11,10 @@ if TYPE_CHECKING:
 
 class CalorieLog(Base):
     __tablename__ = "calorie_logs"
+    __table_args__ = (
+        Index("ix_calorie_logs_user_id", "user_id"),
+        Index("ix_calorie_logs_logged_at", "logged_at"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)
@@ -27,6 +31,10 @@ class CalorieLog(Base):
 
 class WorkoutLog(Base):
     __tablename__ = "workout_logs"
+    __table_args__ = (
+        Index("ix_workout_logs_user_id", "user_id"),
+        Index("ix_workout_logs_logged_at", "logged_at"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)
@@ -44,6 +52,10 @@ class WorkoutLog(Base):
 
 class StepLog(Base):
     __tablename__ = "step_logs"
+    __table_args__ = (
+        Index("ix_step_logs_user_id", "user_id"),
+        Index("ix_step_logs_date", "date"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)
@@ -56,6 +68,10 @@ class StepLog(Base):
 
 class WeightLog(Base):
     __tablename__ = "weight_logs"
+    __table_args__ = (
+        Index("ix_weight_logs_user_id", "user_id"),
+        Index("ix_weight_logs_date", "date"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)

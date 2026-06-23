@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 from typing import Literal, Optional
 from datetime import datetime, timedelta, timezone
 from app.core.database import get_db
@@ -18,15 +18,15 @@ VALID_GENDERS = {"male", "female"}
 
 
 class ProfileUpdate(BaseModel):
-    age: Optional[int] = None
+    age: Optional[int] = Field(None, ge=10, le=120)
     gender: Optional[Literal["male", "female"]] = None
-    weight: Optional[float] = None
-    height: Optional[float] = None
+    weight: Optional[float] = Field(None, ge=20, le=500)
+    height: Optional[float] = Field(None, ge=50, le=300)
     fitness_level: Optional[Literal["beginner", "intermediate", "advanced"]] = None
     goal: Optional[Literal["fat_loss", "muscle_gain", "strength", "endurance"]] = None
     activity_level: Optional[Literal["sedentary", "light", "moderate", "active", "very_active"]] = None
-    workout_frequency: Optional[int] = None
-    equipment: Optional[str] = None
+    workout_frequency: Optional[int] = Field(None, ge=1, le=7)
+    equipment: Optional[str] = Field(None, max_length=200)
 
 
 @router.put("/")
@@ -51,7 +51,7 @@ def update_profile(data: ProfileUpdate, db: Session = Depends(get_db), current_u
 
 
 class WeightLogCreate(BaseModel):
-    weight: float
+    weight: float = Field(..., ge=20, le=500)
     date: Optional[str] = None  # YYYY-MM-DD, defaults to today
 
 

@@ -187,6 +187,10 @@ def get_model():
     return _model
 
 
+# Model RMSE from EDA evaluation (±2σ confidence interval half-width)
+_MODEL_RMSE = 0.30
+
+
 def predict_calories(
     gender: str,
     age: int,
@@ -195,13 +199,19 @@ def predict_calories(
     duration: float,    # minutes
     heart_rate: float,  # BPM
     body_temp: float = 37.5,
-) -> float:
-    """Predict calories burned during a workout session."""
+) -> dict:
+    """Predict calories burned and return point estimate with ±2σ confidence bounds."""
     model = get_model()
     gender_encoded = 1 if gender.lower() == "male" else 0
     X = np.array([[gender_encoded, age, height, weight, duration, heart_rate, body_temp]])
-    prediction = model.predict(X)[0]
-    return round(max(float(prediction), 1.0), 2)
+    raw = float(model.predict(X)[0])
+    point = round(max(raw, 1.0), 2)
+    half_width = round(2 * _MODEL_RMSE, 2)
+    return {
+        "calories": point,
+        "low": round(max(point - half_width, 0.0), 2),
+        "high": round(point + half_width, 2),
+    }
 
 
 def retrain():

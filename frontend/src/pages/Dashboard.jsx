@@ -8,6 +8,7 @@ import {
   PieChart, Pie, Cell, LineChart, Line,
 } from 'recharts';
 import { Flame, Footprints, Dumbbell, Target, TrendingUp, Apple, Scale } from 'lucide-react';
+import { CardSkeleton, StatSkeleton } from '../components/Skeleton';
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -60,7 +61,18 @@ export default function Dashboard() {
     }
   };
 
-  if (loading) return <div className="text-gray-400 text-center py-20">Loading your dashboard...</div>;
+  if (loading) return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {Array.from({ length: 4 }).map((_, i) => <StatSkeleton key={i} />)}
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <CardSkeleton />
+        <CardSkeleton />
+      </div>
+      <CardSkeleton />
+    </div>
+  );
 
   if (error) return (
     <div className="text-center py-20">
@@ -89,7 +101,7 @@ export default function Dashboard() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">
+          <h1 className="text-2xl font-bold text-[var(--text-primary)]">
             Good {greeting}, {user?.username}! 💪
           </h1>
           <p className="text-gray-400 text-sm mt-1">
@@ -138,10 +150,10 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="md:col-span-2 bg-[#111118] rounded-2xl border border-[#222] p-6">
+        <div className="md:col-span-2 bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] p-6">
           <div className="flex items-center gap-2 mb-4">
             <TrendingUp size={18} className="text-orange-400" />
-            <h2 className="text-white font-semibold">7-Day Calorie Intake</h2>
+            <h2 className="text-[var(--text-primary)] font-semibold">7-Day Calorie Intake</h2>
           </div>
           {calorieHistory.length > 0 ? (
             <ResponsiveContainer width="100%" height={200}>
@@ -155,7 +167,7 @@ export default function Dashboard() {
                 <XAxis dataKey="date" tick={{ fill: '#666', fontSize: 11 }} tickFormatter={(v) => v.slice(5)} />
                 <YAxis tick={{ fill: '#666', fontSize: 11 }} />
                 <Tooltip
-                  contentStyle={{ background: '#1a1a24', border: '1px solid #333', borderRadius: '8px' }}
+                  contentStyle={{ background: 'var(--bg-nested)', border: '1px solid var(--border-input)', borderRadius: '8px' }}
                   labelStyle={{ color: '#999' }}
                   itemStyle={{ color: '#f97316' }}
                 />
@@ -171,8 +183,8 @@ export default function Dashboard() {
           )}
         </div>
 
-        <div className="bg-[#111118] rounded-2xl border border-[#222] p-6">
-          <h2 className="text-white font-semibold mb-4">Macro Distribution</h2>
+        <div className="bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] p-6">
+          <h2 className="text-[var(--text-primary)] font-semibold mb-4">Macro Distribution</h2>
           {nutritionPlan ? (
             <>
               <ResponsiveContainer width="100%" height={150}>
@@ -181,7 +193,7 @@ export default function Dashboard() {
                     {macros.map((_, i) => <Cell key={i} fill={macroColors[i]} />)}
                   </Pie>
                   <Tooltip formatter={(v) => `${v.toFixed(1)}%`}
-                    contentStyle={{ background: '#1a1a24', border: '1px solid #333', borderRadius: '8px' }}
+                    contentStyle={{ background: 'var(--bg-nested)', border: '1px solid var(--border-input)', borderRadius: '8px' }}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -206,14 +218,14 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="bg-[#111118] rounded-2xl border border-[#222] p-6">
+      <div className="bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-white font-semibold flex items-center gap-2">
+          <h2 className="text-[var(--text-primary)] font-semibold flex items-center gap-2">
             <Scale size={18} className="text-purple-400" /> Weight Progress
           </h2>
           {weightHistory.length > 0 && (
             <span className="text-gray-400 text-sm">
-              Current: <span className="text-white font-medium">{weightHistory[weightHistory.length - 1].weight} kg</span>
+              Current: <span className="text-[var(--text-primary)] font-medium">{weightHistory[weightHistory.length - 1].weight} kg</span>
             </span>
           )}
         </div>
@@ -225,7 +237,7 @@ export default function Dashboard() {
             onChange={e => setWeightInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && logWeight()}
             placeholder="Enter weight (kg)"
-            className="flex-1 bg-[#1a1a24] border border-[#333] rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-purple-500"
+            className="flex-1 bg-[var(--bg-nested)] border border-[var(--border-input)] rounded-xl px-4 py-2 text-[var(--text-primary)] text-sm focus:outline-none focus:border-purple-500"
           />
           <button
             onClick={logWeight}
@@ -245,7 +257,7 @@ export default function Dashboard() {
                 tickFormatter={v => `${v}kg`}
               />
               <Tooltip
-                contentStyle={{ background: '#1a1a24', border: '1px solid #333', borderRadius: '8px' }}
+                contentStyle={{ background: 'var(--bg-nested)', border: '1px solid var(--border-input)', borderRadius: '8px' }}
                 formatter={v => [`${v} kg`, 'Weight']}
               />
               <Line type="monotone" dataKey="weight" stroke="#a855f7" strokeWidth={2} dot={{ fill: '#a855f7', r: 3 }} />
@@ -261,8 +273,8 @@ export default function Dashboard() {
       </div>
 
       {nutritionPlan && (
-        <div className="bg-[#111118] rounded-2xl border border-[#222] p-6">
-          <h2 className="text-white font-semibold mb-4">Your Daily Nutrition Plan</h2>
+        <div className="bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] p-6">
+          <h2 className="text-[var(--text-primary)] font-semibold mb-4">Your Daily Nutrition Plan</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
               { label: 'BMR', value: `${nutritionPlan.bmr} kcal`, desc: 'Resting metabolic rate' },
@@ -270,9 +282,9 @@ export default function Dashboard() {
               { label: 'Calorie Goal', value: `${nutritionPlan.calorie_goal} kcal`, desc: `For ${nutritionPlan.goal.replace(/_/g, ' ')}` },
               { label: 'Protein Target', value: `${nutritionPlan.macros.protein_g}g`, desc: 'Daily protein intake' },
             ].map(item => (
-              <div key={item.label} className="bg-[#1a1a24] rounded-xl p-4">
+              <div key={item.label} className="bg-[var(--bg-nested)] rounded-xl p-4">
                 <div className="text-gray-400 text-xs mb-1">{item.label}</div>
-                <div className="text-white font-bold text-lg">{item.value}</div>
+                <div className="text-[var(--text-primary)] font-bold text-lg">{item.value}</div>
                 <div className="text-gray-500 text-xs mt-1">{item.desc}</div>
               </div>
             ))}
@@ -291,12 +303,12 @@ function StatCard({ icon, label, value, sub, color }) {
     purple: 'border-purple-500/20 bg-purple-500/5',
   };
   return (
-    <div className={`bg-[#111118] rounded-2xl border ${colors[color]} p-5`}>
+    <div className={`bg-[var(--bg-surface)] rounded-2xl border ${colors[color]} p-5`}>
       <div className="flex items-center gap-2 mb-3">
         {icon}
         <span className="text-gray-400 text-xs">{label}</span>
       </div>
-      <div className="text-2xl font-bold text-white">{value}</div>
+      <div className="text-2xl font-bold text-[var(--text-primary)]">{value}</div>
       <div className="text-gray-500 text-xs mt-1">{sub}</div>
     </div>
   );
