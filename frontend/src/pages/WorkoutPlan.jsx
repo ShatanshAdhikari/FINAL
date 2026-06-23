@@ -219,7 +219,7 @@ export default function WorkoutPlan() {
               <div key={day} className="border border-[var(--border-subtle)] rounded-xl overflow-hidden">
                 <button
                   onClick={() => setExpandedDay(expandedDay === day ? null : day)}
-                  className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition-colors"
+                  className="w-full flex items-center justify-between p-4 hover:bg-[var(--bg-muted)] transition-colors"
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-20 text-orange-400 font-semibold text-sm">{day}</div>

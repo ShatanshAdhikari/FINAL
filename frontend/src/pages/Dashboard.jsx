@@ -205,7 +205,7 @@ export default function Dashboard() {
                 ].map(m => (
                   <div key={m.name} className="flex justify-between text-sm">
                     <span className={m.color}>{m.name}</span>
-                    <span className="text-gray-300">{m.g}g <span className="text-gray-500">({m.pct}%)</span></span>
+                    <span className="text-[var(--text-primary)]">{m.g}g <span className="text-gray-500">({m.pct}%)</span></span>
                   </div>
                 ))}
               </div>

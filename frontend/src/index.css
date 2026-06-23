@@ -9,12 +9,13 @@
   /* Light theme (default when .light class is on html) */
   --bg-base:    #f3f4f6;
   --bg-surface: #ffffff;
-  --bg-nested:  #f1f5f9;
+  --bg-nested:  #ffffff;
   --bg-muted:   #e5e7eb;
-  --border:     #e5e7eb;
-  --border-subtle: #e9ecef;
-  --border-input:  #d1d5db;
+  --border:     #9ca3af;
+  --border-subtle: #d1d5db;
+  --border-input:  #9ca3af;
   --text-primary:  #111827;
+  --text-placeholder: #9ca3af;
   --scrollbar-track: #f1f1f1;
   --scrollbar-thumb: #c0c0c0;
 }
@@ -28,6 +29,7 @@ html.dark {
   --border-subtle: #2a2a2a;
   --border-input:  #333333;
   --text-primary:  #ffffff;
+  --text-placeholder: #555566;
   --scrollbar-track: #1a1a1a;
   --scrollbar-thumb: #444444;
 }
@@ -42,6 +44,11 @@ body {
 
 #root {
   min-height: 100vh;
+}
+
+::placeholder {
+  color: var(--text-placeholder);
+  opacity: 1;
 }
 
 ::-webkit-scrollbar {

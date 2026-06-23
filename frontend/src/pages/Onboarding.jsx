@@ -149,7 +149,7 @@ export default function Onboarding() {
                       className={`p-4 rounded-xl border text-left transition-all ${
                         form.goal === g.value
                           ? 'border-orange-500 bg-orange-500/10 text-[var(--text-primary)]'
-                          : 'border-[var(--border-input)] bg-[var(--bg-nested)] text-gray-300 hover:border-gray-500'
+                          : 'border-[var(--border-input)] bg-[var(--bg-nested)] text-[var(--text-primary)] hover:border-gray-400'
                       }`}
                     >
                       <div className="font-semibold">{g.label}</div>
@@ -168,7 +168,7 @@ export default function Onboarding() {
                       className={`w-full p-4 rounded-xl border text-left transition-all ${
                         form.fitness_level === l.value
                           ? 'border-orange-500 bg-orange-500/10 text-[var(--text-primary)]'
-                          : 'border-[var(--border-input)] bg-[var(--bg-nested)] text-gray-300 hover:border-gray-500'
+                          : 'border-[var(--border-input)] bg-[var(--bg-nested)] text-[var(--text-primary)] hover:border-gray-400'
                       }`}
                     >
                       <span className="font-semibold">{l.label}</span>
@@ -192,7 +192,7 @@ export default function Onboarding() {
                       className={`w-full p-3 rounded-xl border text-left transition-all ${
                         form.activity_level === a.value
                           ? 'border-orange-500 bg-orange-500/10 text-[var(--text-primary)]'
-                          : 'border-[var(--border-input)] bg-[var(--bg-nested)] text-gray-300 hover:border-gray-500'
+                          : 'border-[var(--border-input)] bg-[var(--bg-nested)] text-[var(--text-primary)] hover:border-gray-400'
                       }`}
                     >
                       <span className="font-semibold text-sm">{a.label}</span>
@@ -222,7 +222,7 @@ export default function Onboarding() {
             {step > 0 && (
               <button
                 onClick={() => setStep(s => s - 1)}
-                className="flex-1 py-3 rounded-xl border border-[var(--border-input)] text-gray-300 hover:border-gray-500 transition-colors"
+                className="flex-1 py-3 rounded-xl border border-[var(--border-input)] text-[var(--text-primary)] hover:border-gray-400 transition-colors"
               >
                 Back
               </button>

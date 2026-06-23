@@ -108,7 +108,7 @@ export default function AdminPanel() {
                 </thead>
                 <tbody>
                   {users.map(u => (
-                    <tr key={u.id} className="border-b border-[var(--border-subtle)] hover:bg-white/5 transition-colors">
+                    <tr key={u.id} className="border-b border-[var(--border-subtle)] hover:bg-[var(--bg-muted)] transition-colors">
                       <td className="px-6 py-4 text-gray-500 text-sm">#{u.id}</td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">

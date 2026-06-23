@@ -4,7 +4,8 @@ import { useTheme } from '../context/ThemeContext';
 import {
   LayoutDashboard, Dumbbell, Apple, Footprints, User, LogOut, Shield, Sun, Moon
 } from 'lucide-react';
-import logo from '../assets/logo.png';
+import logoDark from '../assets/logo.png';
+import logoLight from '../assets/logo-light.png';
 
 const navItems = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -31,7 +32,7 @@ export default function Layout() {
       <aside className="hidden md:flex w-64 bg-[var(--bg-surface)] border-r border-[var(--border)] flex-col fixed h-full z-10">
         {/* Logo */}
         <div className="p-4 border-b border-[var(--border)] flex items-center justify-center">
-          <img src={logo} alt="GetFit" className="w-48 rounded-xl bg-[var(--bg-surface)] p-2" />
+          <img src={theme === 'dark' ? logoDark : logoLight} alt="GetFit" className="w-48 rounded-xl p-2" />
         </div>
 
         {/* Nav */}
@@ -44,7 +45,7 @@ export default function Layout() {
                 `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
                   isActive
                     ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
-                    : 'text-gray-400 hover:bg-white/5 hover:text-[var(--text-primary)]'
+                    : 'text-gray-400 hover:bg-[var(--bg-muted)] hover:text-[var(--text-primary)]'
                 }`
               }
             >
@@ -60,7 +61,7 @@ export default function Layout() {
                 `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
                   isActive
                     ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
-                    : 'text-gray-400 hover:bg-white/5 hover:text-[var(--text-primary)]'
+                    : 'text-gray-400 hover:bg-[var(--bg-muted)] hover:text-[var(--text-primary)]'
                 }`
               }
             >
@@ -84,7 +85,7 @@ export default function Layout() {
           <button
             onClick={toggle}
             aria-label="Toggle theme"
-            className="w-full flex items-center gap-3 px-4 py-2 rounded-xl text-sm text-gray-400 hover:bg-white/5 hover:text-[var(--text-primary)] transition-all mb-1"
+            className="w-full flex items-center gap-3 px-4 py-2 rounded-xl text-sm text-gray-400 hover:bg-[var(--bg-muted)] hover:text-[var(--text-primary)] transition-all mb-1"
           >
             {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
             {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
