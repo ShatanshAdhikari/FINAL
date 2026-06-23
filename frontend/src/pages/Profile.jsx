@@ -32,7 +32,7 @@ export default function Profile() {
         equipment: user.equipment || '',
       });
     }
-    api.get('/profile/nutrition-plan').then(r => setNutritionPlan(r.data)).catch(() => {});
+    void api.get('/profile/nutrition-plan').then(r => setNutritionPlan(r.data)).catch(() => {});
   }, [user]);
 
   const update = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
@@ -49,9 +49,8 @@ export default function Profile() {
       });
       await refreshUser();
       toast.success('Profile saved!');
-      // Refresh nutrition plan
-      api.get('/profile/nutrition-plan').then(r => setNutritionPlan(r.data)).catch(() => {});
-    } catch (e) {
+      void api.get('/profile/nutrition-plan').then(r => setNutritionPlan(r.data)).catch(() => {});
+    } catch {
       toast.error('Failed to save');
     } finally {
       setLoading(false);
@@ -65,7 +64,6 @@ export default function Profile() {
         <p className="text-gray-400 text-sm mt-1">Manage your personal information and fitness settings</p>
       </div>
 
-      {/* Avatar */}
       <div className="bg-[#111118] rounded-2xl border border-[#222] p-6 flex items-center gap-4">
         <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center text-white text-3xl font-bold">
           {user?.username?.[0]?.toUpperCase()}
@@ -81,7 +79,6 @@ export default function Profile() {
         </div>
       </div>
 
-      {/* Personal Info */}
       <div className="bg-[#111118] rounded-2xl border border-[#222] p-6">
         <h2 className="text-white font-semibold mb-4 flex items-center gap-2">
           <User size={18} className="text-orange-400" /> Personal Information
@@ -113,7 +110,6 @@ export default function Profile() {
         </div>
       </div>
 
-      {/* Fitness Settings */}
       <div className="bg-[#111118] rounded-2xl border border-[#222] p-6">
         <h2 className="text-white font-semibold mb-4">Fitness Settings</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -122,7 +118,7 @@ export default function Profile() {
             <select value={form.goal} onChange={e => update('goal', e.target.value)}
               className="w-full bg-[#1a1a24] border border-[#333] rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-orange-500">
               <option value="">Select goal</option>
-              {goals.map(g => <option key={g} value={g}>{g.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}</option>)}
+              {goals.map(g => <option key={g} value={g}>{g.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</option>)}
             </select>
           </div>
           <div>
@@ -138,7 +134,7 @@ export default function Profile() {
             <select value={form.activity_level} onChange={e => update('activity_level', e.target.value)}
               className="w-full bg-[#1a1a24] border border-[#333] rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-orange-500">
               <option value="">Select activity level</option>
-              {activityLevels.map(a => <option key={a} value={a}>{a.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}</option>)}
+              {activityLevels.map(a => <option key={a} value={a}>{a.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</option>)}
             </select>
           </div>
           <div>
@@ -161,7 +157,6 @@ export default function Profile() {
         </button>
       </div>
 
-      {/* Nutrition Plan Summary */}
       {nutritionPlan && (
         <div className="bg-[#111118] rounded-2xl border border-[#222] p-6">
           <h2 className="text-white font-semibold mb-4">Your Nutrition Plan</h2>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
 import { Search, Plus, Trash2, Apple } from 'lucide-react';
@@ -6,8 +6,6 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recha
 
 const mealTypes = ['breakfast', 'lunch', 'dinner', 'snack'];
 
-// Scale all nutrients proportionally to the entered weight.
-// Nutritionix provides serving_weight_grams as the base; fall back to 100g.
 function getScaled(food, grams) {
   const base = food.serving_weight_grams || 100;
   const ratio = (parseFloat(grams) || 0) / base;
@@ -22,36 +20,32 @@ function getScaled(food, grams) {
 export default function CalorieTracker() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
-  const [quantities, setQuantities] = useState({});   // { [resultIndex]: grams }
+  const [quantities, setQuantities] = useState({});
   const [searching, setSearching] = useState(false);
   const [todayLogs, setTodayLogs] = useState({ logs: [], totals: {} });
   const [history, setHistory] = useState([]);
   const [selectedMeal, setSelectedMeal] = useState('snack');
   const [nutritionPlan, setNutritionPlan] = useState(null);
 
-  useEffect(() => {
-    fetchToday();
-    fetchHistory();
-    api.get('/profile/nutrition-plan').then(r => setNutritionPlan(r.data)).catch(() => {});
-  }, []);
-
-  const fetchToday = async () => {
+  const fetchToday = useCallback(async () => {
     try {
       const res = await api.get('/nutrition/logs/today');
       setTodayLogs(res.data);
-    } catch (e) {
-      console.error('Failed to fetch today logs', e);
-    }
-  };
+    } catch {}
+  }, []);
 
-  const fetchHistory = async () => {
+  const fetchHistory = useCallback(async () => {
     try {
       const res = await api.get('/nutrition/logs/history?days=7');
       setHistory(res.data);
-    } catch (e) {
-      console.error('Failed to fetch history', e);
-    }
-  };
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    void fetchToday();
+    void fetchHistory();
+    void api.get('/profile/nutrition-plan').then(r => setNutritionPlan(r.data)).catch(() => {});
+  }, [fetchToday, fetchHistory]);
 
   const searchFood = async () => {
     if (!searchQuery.trim()) return;
@@ -60,11 +54,10 @@ export default function CalorieTracker() {
       const res = await api.post('/nutrition/search', { query: searchQuery });
       const foods = res.data.foods || [];
       setSearchResults(foods);
-      // Pre-fill each result's quantity with its serving weight (or 100 g)
       const initial = {};
       foods.forEach((f, i) => { initial[i] = f.serving_weight_grams || 100; });
       setQuantities(initial);
-    } catch (e) {
+    } catch {
       toast.error('Food search failed');
     } finally {
       setSearching(false);
@@ -88,12 +81,12 @@ export default function CalorieTracker() {
         meal_type: selectedMeal,
       });
       toast.success(`${food.food_name} (${grams}g) logged! 🥗`);
-      fetchToday();
-      fetchHistory();
+      void fetchToday();
+      void fetchHistory();
       setSearchResults([]);
       setSearchQuery('');
       setQuantities({});
-    } catch (e) {
+    } catch {
       toast.error('Failed to log food');
     }
   };
@@ -102,9 +95,9 @@ export default function CalorieTracker() {
     try {
       await api.delete(`/nutrition/log/${id}`);
       toast.success('Removed');
-      fetchToday();
-      fetchHistory();
-    } catch (e) {
+      void fetchToday();
+      void fetchHistory();
+    } catch {
       toast.error('Failed to delete');
     }
   };
@@ -117,11 +110,10 @@ export default function CalorieTracker() {
   const remaining   = calorieGoal - consumed;
   const progress    = Math.min((consumed / calorieGoal) * 100, 100);
 
-  const mealGroups = mealTypes.map(m => ({
-    type:  m,
-    items: todayLogs.logs.filter(l => l.meal_type === m),
-    total: todayLogs.logs.filter(l => l.meal_type === m).reduce((s, l) => s + l.calories, 0),
-  }));
+  const mealGroups = mealTypes.map(m => {
+    const items = todayLogs.logs.filter(l => l.meal_type === m);
+    return { type: m, items, total: items.reduce((s, l) => s + l.calories, 0) };
+  });
 
   return (
     <div className="space-y-6">
@@ -130,7 +122,6 @@ export default function CalorieTracker() {
         <p className="text-gray-400 text-sm mt-1">Log meals and track daily intake</p>
       </div>
 
-      {/* ── Daily Progress ── */}
       <div className="bg-[#111118] rounded-2xl border border-[#222] p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-white font-semibold">Today's Progress</h2>
@@ -161,7 +152,6 @@ export default function CalorieTracker() {
           </div>
         </div>
 
-        {/* Macro progress bars */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {[
             { name: 'Protein', consumed: todayLogs.totals?.protein || 0, goal: nutritionPlan?.macros?.protein_g || 0, color: 'bg-orange-500' },
@@ -184,13 +174,11 @@ export default function CalorieTracker() {
         </div>
       </div>
 
-      {/* ── Food Search ── */}
       <div className="bg-[#111118] rounded-2xl border border-[#222] p-6">
         <h2 className="text-white font-semibold mb-4 flex items-center gap-2">
           <Search size={18} className="text-orange-400" /> Search & Log Food
         </h2>
 
-        {/* Search bar row */}
         <div className="flex gap-2 mb-4">
           <select
             value={selectedMeal}
@@ -218,7 +206,6 @@ export default function CalorieTracker() {
           </button>
         </div>
 
-        {/* Search results — each with a weight input */}
         {searchResults.length > 0 && (
           <div className="space-y-3">
             {searchResults.map((food, i) => {
@@ -228,18 +215,13 @@ export default function CalorieTracker() {
 
               return (
                 <div key={i} className="bg-[#1a1a24] rounded-xl p-4 border border-[#2a2a2a]">
-                  {/* Name + live calorie count */}
                   <div className="flex items-start justify-between mb-2">
                     <div className="text-white text-sm font-medium capitalize">{food.food_name}</div>
                     <div className="text-orange-400 font-bold text-lg leading-none">{scaled.calories} kcal</div>
                   </div>
-
-                  {/* Live macros */}
                   <div className="text-gray-500 text-xs mb-3">
                     {scaled.protein}g protein &middot; {scaled.carbs}g carbs &middot; {scaled.fat}g fat
                   </div>
-
-                  {/* Weight input + Add button */}
                   <div className="flex items-center gap-2">
                     <div className="flex items-center flex-1 bg-[#111118] border border-[#333] rounded-xl overflow-hidden focus-within:border-orange-500 transition-colors">
                       <input
@@ -261,8 +243,6 @@ export default function CalorieTracker() {
                       Add
                     </button>
                   </div>
-
-                  {/* Per-100g reference */}
                   <div className="text-gray-600 text-xs mt-2">
                     Per 100 g: {per100} kcal
                   </div>
@@ -273,7 +253,6 @@ export default function CalorieTracker() {
         )}
       </div>
 
-      {/* ── Today's Meals ── */}
       <div className="bg-[#111118] rounded-2xl border border-[#222] p-6">
         <h2 className="text-white font-semibold mb-4">Today's Meals</h2>
         <div className="space-y-4">
@@ -317,7 +296,6 @@ export default function CalorieTracker() {
         </div>
       </div>
 
-      {/* ── 7-day chart ── */}
       {history.length > 0 && (
         <div className="bg-[#111118] rounded-2xl border border-[#222] p-6">
           <h2 className="text-white font-semibold mb-4">7-Day Calorie History</h2>

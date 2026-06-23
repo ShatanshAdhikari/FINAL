@@ -1,17 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
 import { Footprints, Flame, Heart, Play, Square } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 const STEP_GOAL = 10000;
-
-// ─── Accelerometer Step Counter Hook ──────────────────────────────────────────
-// Peak-detection on acceleration magnitude (|a| = √(x²+y²+z²)).
-// A step is registered when the magnitude crosses STEP_THRESHOLD after a
-// minimum interval — simple but effective for walking detection.
-const STEP_THRESHOLD = 13;      // m/s² — tune up if too sensitive, down if missing steps
-const MIN_STEP_INTERVAL = 280;  // ms  — prevents double-counting a single footfall
+const STEP_THRESHOLD = 13;
+const MIN_STEP_INTERVAL = 280;
 
 function useStepCounter() {
   const [liveSteps, setLiveSteps] = useState(0);
@@ -44,7 +39,6 @@ function useStepCounter() {
   }, [isRunning]);
 
   const start = async () => {
-    // iOS 13+ requires an explicit user-gesture permission request
     if (typeof DeviceMotionEvent?.requestPermission === 'function') {
       try {
         const permission = await DeviceMotionEvent.requestPermission();
@@ -72,7 +66,6 @@ function useStepCounter() {
   return { liveSteps, isRunning, isSupported, start, stop };
 }
 
-// ─── Component ─────────────────────────────────────────────────────────────────
 export default function StepTracker() {
   const [today, setToday] = useState(null);
   const [history, setHistory] = useState([]);
@@ -81,28 +74,24 @@ export default function StepTracker() {
 
   const { liveSteps, isRunning, isSupported, start, stop } = useStepCounter();
 
-  useEffect(() => {
-    fetchToday();
-    fetchHistory();
-  }, []);
-
-  const fetchToday = async () => {
+  const fetchToday = useCallback(async () => {
     try {
       const res = await api.get('/steps/today');
       setToday(res.data);
-    } catch (e) {
-      console.error('Failed to fetch today steps', e);
-    }
-  };
+    } catch {}
+  }, []);
 
-  const fetchHistory = async () => {
+  const fetchHistory = useCallback(async () => {
     try {
       const res = await api.get('/steps/history?days=7');
       setHistory(res.data);
-    } catch (e) {
-      console.error('Failed to fetch step history', e);
-    }
-  };
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    void fetchToday();
+    void fetchHistory();
+  }, [fetchToday, fetchHistory]);
 
   const logSteps = async (overrideSteps) => {
     const value = overrideSteps ?? stepInput;
@@ -115,13 +104,13 @@ export default function StepTracker() {
     try {
       await api.post('/steps/log', {
         steps: count,
-        date: new Date().toISOString().split('T')[0],
+        date: new Date().toLocaleDateString('en-CA'),
       });
       toast.success('Steps logged! 👣');
       setStepInput('');
-      fetchToday();
-      fetchHistory();
-    } catch (e) {
+      void fetchToday();
+      void fetchHistory();
+    } catch {
       toast.error('Failed to log steps');
     } finally {
       setLoading(false);
@@ -154,7 +143,6 @@ export default function StepTracker() {
         <p className="text-gray-400 text-sm mt-1">Track your daily steps and activity</p>
       </div>
 
-      {/* Step Ring + Info */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-[#111118] rounded-2xl border border-[#222] p-8 flex flex-col items-center justify-center">
           <div className="relative">
@@ -214,7 +202,6 @@ export default function StepTracker() {
         </div>
       </div>
 
-      {/* ── Accelerometer Counter ── */}
       {isSupported && (
         <div className="bg-[#111118] rounded-2xl border border-[#222] p-6">
           <div className="flex items-center justify-between mb-1">
@@ -228,7 +215,6 @@ export default function StepTracker() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center gap-4">
-            {/* Live count display */}
             <div className="flex-1 w-full bg-[#1a1a24] rounded-2xl p-6 text-center">
               <div className={`text-5xl font-bold tabular-nums transition-all ${isRunning ? 'text-orange-400' : 'text-white'}`}>
                 {liveSteps.toLocaleString()}
@@ -243,7 +229,6 @@ export default function StepTracker() {
               </div>
             </div>
 
-            {/* Start / Stop button */}
             {!isRunning ? (
               <button
                 onClick={handleStartCounter}
@@ -265,7 +250,6 @@ export default function StepTracker() {
         </div>
       )}
 
-      {/* ── Manual Log ── */}
       <div className="bg-[#111118] rounded-2xl border border-[#222] p-6">
         <h2 className="text-white font-semibold mb-1">Update Today's Steps</h2>
         <p className="text-gray-500 text-xs mb-4">
@@ -293,7 +277,6 @@ export default function StepTracker() {
         </div>
       </div>
 
-      {/* ── 7-day history ── */}
       <div className="bg-[#111118] rounded-2xl border border-[#222] p-6">
         <h2 className="text-white font-semibold mb-4">7-Day Step History</h2>
         <ResponsiveContainer width="100%" height={200}>

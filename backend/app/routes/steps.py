@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
-from datetime import datetime, date
+from datetime import datetime, timedelta, timezone
 from app.core.database import get_db
 from app.routes.auth import get_current_user
 from app.models.user import User
@@ -55,7 +55,7 @@ def get_today_steps(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    today = datetime.utcnow().date().isoformat()
+    today = datetime.now(timezone.utc).date().isoformat()
     log = db.query(StepLog).filter(
         StepLog.user_id == current_user.id,
         StepLog.date == today
@@ -63,7 +63,7 @@ def get_today_steps(
 
     bmr = None
     if all([current_user.gender, current_user.weight, current_user.height, current_user.age]):
-        bmr = round(calculate_bmr(current_user.gender, current_user.weight, current_user.height, current_user.age), 0)
+        bmr = round(calculate_bmr(current_user.gender or "", current_user.weight or 0.0, current_user.height or 0.0, current_user.age or 0), 0)
 
     return {
         "date": today,
@@ -79,8 +79,7 @@ def get_step_history(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    from datetime import timedelta
-    dates = [(datetime.utcnow().date() - timedelta(days=i)).isoformat() for i in range(days)]
+    dates = [(datetime.now(timezone.utc).date() - timedelta(days=i)).isoformat() for i in range(days)]
     logs = db.query(StepLog).filter(
         StepLog.user_id == current_user.id,
         StepLog.date.in_(dates)

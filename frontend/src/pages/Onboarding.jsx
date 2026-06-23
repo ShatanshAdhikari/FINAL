@@ -43,6 +43,11 @@ export default function Onboarding() {
 
   const handleFinish = async () => {
     setLoading(true);
+    if (!form.activity_level) {
+      toast.error('Please select an activity level');
+      setLoading(false);
+      return;
+    }
     try {
       await api.put('/profile/', {
         ...form,
@@ -54,7 +59,7 @@ export default function Onboarding() {
       await refreshUser();
       toast.success('Profile set up! Let\'s get fit 🎯');
       navigate('/dashboard');
-    } catch (err) {
+    } catch {
       toast.error('Failed to save profile');
     } finally {
       setLoading(false);
@@ -64,10 +69,9 @@ export default function Onboarding() {
   return (
     <div className="min-h-screen bg-[#0f0f0f] flex items-center justify-center p-4">
       <div className="w-full max-w-2xl">
-        {/* Progress */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
-            {steps.map((s, i) => (
+            {steps.map((_, i) => (
               <div key={i} className="flex items-center">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all ${
                   i <= step ? 'bg-orange-500 text-white' : 'bg-[#222] text-gray-500'
@@ -85,7 +89,6 @@ export default function Onboarding() {
         </div>
 
         <div className="bg-[#111118] rounded-2xl border border-[#222] p-8">
-          {/* Step 0: Personal Info */}
           {step === 0 && (
             <div className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
@@ -134,7 +137,6 @@ export default function Onboarding() {
             </div>
           )}
 
-          {/* Step 1: Fitness Goals */}
           {step === 1 && (
             <div className="space-y-6">
               <div>
@@ -178,7 +180,6 @@ export default function Onboarding() {
             </div>
           )}
 
-          {/* Step 2: Workout Preferences */}
           {step === 2 && (
             <div className="space-y-6">
               <div>
@@ -217,7 +218,6 @@ export default function Onboarding() {
             </div>
           )}
 
-          {/* Navigation */}
           <div className="flex gap-3 mt-8">
             {step > 0 && (
               <button
@@ -229,7 +229,21 @@ export default function Onboarding() {
             )}
             {step < steps.length - 1 ? (
               <button
-                onClick={() => setStep(s => s + 1)}
+                onClick={() => {
+                  if (step === 0) {
+                    if (!form.age || !form.weight || !form.height) {
+                      toast.error('Please fill in age, weight, and height');
+                      return;
+                    }
+                  }
+                  if (step === 1) {
+                    if (!form.goal || !form.fitness_level) {
+                      toast.error('Please select a goal and fitness level');
+                      return;
+                    }
+                  }
+                  setStep(s => s + 1);
+                }}
                 className="flex-1 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-red-600 text-white font-semibold hover:opacity-90 transition-opacity"
               >
                 Continue

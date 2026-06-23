@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
-import { Users, BarChart3, Trash2, ToggleLeft, ToggleRight, ArrowLeft } from 'lucide-react';
+import { Users, Trash2, ToggleLeft, ToggleRight, ArrowLeft } from 'lucide-react';
 
 export default function AdminPanel() {
   const { user } = useAuth();
@@ -12,11 +12,7 @@ export default function AdminPanel() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const [usersRes, statsRes] = await Promise.all([
         api.get('/admin/users'),
@@ -24,12 +20,16 @@ export default function AdminPanel() {
       ]);
       setUsers(usersRes.data);
       setStats(statsRes.data);
-    } catch (e) {
+    } catch {
       toast.error('Failed to load admin data');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    void fetchData();
+  }, [fetchData]);
 
   const deleteUser = async (id, username) => {
     if (!confirm(`Delete user "${username}"? This cannot be undone.`)) return;
@@ -37,7 +37,7 @@ export default function AdminPanel() {
       await api.delete(`/admin/users/${id}`);
       toast.success('User deleted');
       fetchData();
-    } catch (e) {
+    } catch {
       toast.error('Failed to delete user');
     }
   };
@@ -47,7 +47,7 @@ export default function AdminPanel() {
       const res = await api.patch(`/admin/users/${id}/toggle-active`);
       toast.success(res.data.message);
       fetchData();
-    } catch (e) {
+    } catch {
       toast.error('Failed to update user');
     }
   };
@@ -108,12 +108,12 @@ export default function AdminPanel() {
                 </thead>
                 <tbody>
                   {users.map(u => (
-                    <tr key={u.id} className="border-b border-[#1a1a1a] hover:bg-white/2 transition-colors">
+                    <tr key={u.id} className="border-b border-[#1a1a1a] hover:bg-white/5 transition-colors">
                       <td className="px-6 py-4 text-gray-500 text-sm">#{u.id}</td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
                           <div className="w-7 h-7 rounded-full bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center text-white text-xs font-bold">
-                            {u.username[0].toUpperCase()}
+                            {u.username?.[0]?.toUpperCase() ?? '?'}
                           </div>
                           <span className="text-white text-sm font-medium">{u.username}</span>
                           {u.is_admin && <span className="text-xs bg-purple-500/20 text-purple-400 px-1.5 py-0.5 rounded">admin</span>}
@@ -122,7 +122,7 @@ export default function AdminPanel() {
                       <td className="px-6 py-4 text-gray-400 text-sm">{u.email}</td>
                       <td className="px-6 py-4 text-sm">
                         {u.goal ? (
-                          <span className="text-orange-400">{u.goal.replace('_', ' ')}</span>
+                          <span className="text-orange-400">{u.goal.replace(/_/g, ' ')}</span>
                         ) : <span className="text-gray-600">—</span>}
                       </td>
                       <td className="px-6 py-4 text-sm">

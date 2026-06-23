@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List
 from app.core.database import get_db
 from app.routes.auth import get_current_user
 from app.models.user import User
@@ -167,6 +166,32 @@ def demote_from_super_admin(
     db.commit()
     db.refresh(user)
     return {"message": f"User '{user.username}' demoted to admin", "user": _user_dict(user)}
+
+
+# ─── ML Model ────────────────────────────────────────────────────────────────
+
+@router.post("/ml/retrain")
+def retrain_model(admin: User = Depends(require_admin)):
+    """Force retrain the calorie predictor (run after uploading new CSV data)."""
+    from app.ml.calorie_predictor import retrain
+    result = retrain()
+    return result
+
+
+@router.get("/ml/status")
+def ml_status(admin: User = Depends(require_admin)):
+    """Check whether the real Kaggle dataset is present."""
+    import os
+    from app.ml.calorie_predictor import EXERCISE_CSV, CALORIES_CSV, MERGED_CSV, MODEL_PATH
+    two_files = os.path.exists(EXERCISE_CSV) and os.path.exists(CALORIES_CSV)
+    merged = os.path.exists(MERGED_CSV)
+    return {
+        "exercise_csv_found": os.path.exists(EXERCISE_CSV),
+        "calories_csv_found": os.path.exists(CALORIES_CSV),
+        "merged_csv_found": merged,
+        "model_trained": os.path.exists(MODEL_PATH),
+        "using_real_data": two_files or merged,
+    }
 
 
 # ─── Stats ────────────────────────────────────────────────────────────────────

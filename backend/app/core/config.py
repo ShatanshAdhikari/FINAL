@@ -1,9 +1,17 @@
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     # Security — SECRET_KEY must be set in .env (no insecure default)
-    SECRET_KEY: str
+    SECRET_KEY: str = ""
+
+    @field_validator("SECRET_KEY")
+    @classmethod
+    def secret_key_must_not_be_empty(cls, v: str) -> str:
+        if not v:
+            raise ValueError("SECRET_KEY must be set in .env — refusing to start with an empty signing key")
+        return v
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 1 day
 

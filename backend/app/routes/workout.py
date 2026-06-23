@@ -2,7 +2,6 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional
-from datetime import datetime
 from app.core.database import get_db
 from app.routes.auth import get_current_user
 from app.models.user import User
@@ -28,16 +27,17 @@ class CaloriePredictRequest(BaseModel):
 
 
 @router.get("/plan")
-def get_workout_plan(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_workout_plan(current_user: User = Depends(get_current_user)):
     if not all([current_user.fitness_level, current_user.goal, current_user.workout_frequency]):
         raise HTTPException(status_code=400, detail="Please complete your profile first (fitness_level, goal, workout_frequency)")
 
     plan = generate_workout_plan(
-        fitness_level=current_user.fitness_level,
-        goal=current_user.goal,
-        workout_frequency=current_user.workout_frequency,
+        fitness_level=current_user.fitness_level or "",
+        goal=current_user.goal or "",
+        workout_frequency=current_user.workout_frequency or 3,
         age=current_user.age or 25,
         gender=current_user.gender or "male",
+        user_id=current_user.id,
     )
     return plan
 
@@ -45,7 +45,6 @@ def get_workout_plan(db: Session = Depends(get_db), current_user: User = Depends
 @router.post("/predict-calories")
 def predict_workout_calories(
     data: CaloriePredictRequest,
-    db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     missing = [f for f, v in {
@@ -61,10 +60,10 @@ def predict_workout_calories(
         )
 
     calories = predict_calories(
-        gender=current_user.gender,
-        age=current_user.age,
-        height=current_user.height,
-        weight=current_user.weight,
+        gender=current_user.gender or "",
+        age=current_user.age or 0,
+        height=current_user.height or 0.0,
+        weight=current_user.weight or 0.0,
         duration=data.duration_minutes,
         heart_rate=data.heart_rate,
         body_temp=data.body_temp or 37.5,
@@ -100,13 +99,13 @@ def get_workout_logs(
     logs = db.query(WorkoutLog).filter(WorkoutLog.user_id == current_user.id).order_by(WorkoutLog.logged_at.desc()).limit(50).all()
     return [
         {
-            "id": l.id,
-            "exercise_name": l.exercise_name,
-            "duration_minutes": l.duration_minutes,
-            "heart_rate": l.heart_rate,
-            "calories_burned": l.calories_burned,
-            "notes": l.notes,
-            "logged_at": l.logged_at.isoformat(),
+            "id": log.id,
+            "exercise_name": log.exercise_name,
+            "duration_minutes": log.duration_minutes,
+            "heart_rate": log.heart_rate,
+            "calories_burned": log.calories_burned,
+            "notes": log.notes,
+            "logged_at": log.logged_at.isoformat() if log.logged_at else None,
         }
-        for l in logs
+        for log in logs
     ]
