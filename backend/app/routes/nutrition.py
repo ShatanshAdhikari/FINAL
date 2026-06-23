@@ -26,46 +26,44 @@ class CalorieLogCreate(BaseModel):
     meal_type: Optional[str] = "snack"
 
 
-def _search_openfoodfacts(query: str) -> dict:
-    """Search OpenFoodFacts v2 REST API (free, no key) and normalise to Nutritionix shape."""
-    url = "https://world.openfoodfacts.org/api/v2/search"
+def _search_usda(query: str) -> dict:
+    """Search USDA FoodData Central (free, no-signup DEMO_KEY works for dev)."""
+    url = "https://api.nal.usda.gov/fdc/v1/foods/search"
     params = {
-        "search_terms": query,
-        "fields": "product_name,nutriments,serving_quantity",
-        "page_size": 10,
-        "json": 1,
+        "query": query,
+        "api_key": settings.USDA_API_KEY,
+        "pageSize": 10,
     }
-    headers: dict[str, str | bytes] = {"User-Agent": "GetFit-App/1.0 (open-source fitness tracker)"}
-    resp = requests.get(url, params=params, headers=headers, timeout=10)
+    resp = requests.get(url, params=params, timeout=10)
     resp.raise_for_status()
-    products = resp.json().get("products", [])
+    items = resp.json().get("foods", [])
 
     foods = []
-    for p in products:
-        name = p.get("product_name", "").strip()
+    for item in items:
+        name = item.get("description", "").strip()
         if not name:
             continue
-        n = p.get("nutriments", {})
-        kcal = n.get("energy-kcal_100g") or (n.get("energy_100g", 0) / 4.184)
+        nutrients = {n["nutrientName"]: n.get("value", 0) for n in item.get("foodNutrients", [])}
+        kcal = nutrients.get("Energy", 0)
         if not kcal:
-            continue  # skip entries with no calorie data
+            continue
         foods.append({
-            "food_name": name,
+            "food_name": name.title(),
             "nf_calories": round(float(kcal), 1),
-            "nf_protein": round(float(n.get("proteins_100g", 0)), 1),
-            "nf_total_carbohydrate": round(float(n.get("carbohydrates_100g", 0)), 1),
-            "nf_total_fat": round(float(n.get("fat_100g", 0)), 1),
+            "nf_protein": round(float(nutrients.get("Protein", 0)), 1),
+            "nf_total_carbohydrate": round(float(nutrients.get("Carbohydrate, by difference", 0)), 1),
+            "nf_total_fat": round(float(nutrients.get("Total lipid (fat)", 0)), 1),
             "serving_weight_grams": 100,
             "serving_qty": 100,
             "serving_unit": "g",
         })
 
-    return {"foods": foods, "source": "OpenFoodFacts"}
+    return {"foods": foods, "source": "USDA FoodData Central"}
 
 
 @router.post("/search")
 def search_food(data: FoodSearchRequest, current_user: User = Depends(get_current_user)):
-    """Search food — uses Nutritionix if API keys are set, else OpenFoodFacts (free)."""
+    """Search food — uses Nutritionix if API keys are set, else USDA FoodData Central (free)."""
     if settings.NUTRITIONIX_APP_ID and settings.NUTRITIONIX_API_KEY:
         url = "https://trackapi.nutritionix.com/v2/natural/nutrients"
         headers: dict[str, str | bytes] = {
@@ -79,7 +77,7 @@ def search_food(data: FoodSearchRequest, current_user: User = Depends(get_curren
         return response.json()
 
     try:
-        return _search_openfoodfacts(data.query)
+        return _search_usda(data.query)
     except Exception:
         raise HTTPException(
             status_code=502,
