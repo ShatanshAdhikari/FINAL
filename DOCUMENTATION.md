@@ -3,6 +3,17 @@
 > Personalized Fitness & Nutrition Web Application  
 > Stack: React (Vite) · FastAPI · SQLite · Scikit-learn  
 
+**Public Repository:** https://github.com/ShatanshAdhikari/GetFit-App  
+**Private Repository:** https://github.com/ShatanshAdhikari/GetFit  
+
+### Sprint Structure (Public Repo)
+
+| Branch | Sprint | Status |
+|---|---|---|
+| `main` | Sprint 1–3: Foundation, Nutrition Tracker, Workout + ML | Merged |
+| `feat/sprint-4-step-tracker` | Sprint 4: Step Tracker + Dashboard | Open PR — merges end of Week 8 |
+| `feat/sprint-5-admin-polish` | Sprint 5: Admin Panel + Super Admin Roles + Polish | Open PR — merges end of Week 10 |
+
 ---
 
 ## Table of Contents
@@ -155,11 +166,12 @@ All background, border, and primary text colours are driven by CSS custom proper
 |---|---|---|
 | `--bg-base` | `#0f0f0f` | `#f3f4f6` |
 | `--bg-surface` | `#111118` | `#ffffff` |
-| `--bg-nested` | `#1a1a24` | `#f1f5f9` |
+| `--bg-nested` | `#1a1a24` | `#ffffff` |
 | `--bg-muted` | `#222222` | `#e5e7eb` |
-| `--border` | `#222222` | `#e5e7eb` |
-| `--border-input` | `#333333` | `#d1d5db` |
+| `--border` | `#222222` | `#9ca3af` |
+| `--border-input` | `#333333` | `#9ca3af` |
 | `--text-primary` | `#ffffff` | `#111827` |
+| `--text-placeholder` | `#555566` | `#9ca3af` |
 
 `ThemeContext` reads the preference from `localStorage` on mount. `main.jsx` applies the class to `<html>` before React renders to prevent a flash of the wrong theme.
 
@@ -630,60 +642,9 @@ Dashboard updates macro rings
 | Node.js | 18+ |
 | npm | 9+ |
 
-### First-Time Setup
-
-```bash
-# 1. Create the virtual environment
-cd backend
-python -m venv venv
-
-# 2. Install Python dependencies
-venv\Scripts\pip install -r requirements.txt
-
-# 3. Seed the database (creates all test accounts)
-venv\Scripts\python seed_users.py
-```
-
-```bash
-# 4. Install frontend dependencies
-cd frontend
-npm install
-```
-
 ### Starting the App
 
-#### Option A — One command (recommended)
-
-```
-double-click  start-all.bat
-```
-
-Opens the backend and frontend **each in their own terminal window**.
-
-#### Option B — Separately
-
-| Script | What it does |
-|--------|-------------|
-| `start-backend.bat` | Starts FastAPI on `:8000` using the venv Python |
-| `start-frontend.bat` | Starts Vite dev server on `:5173` (auto-runs `npm install` if needed) |
-
-#### Option C — Manual (terminal)
-
-**Backend:**
-```bash
-cd backend
-venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-> ⚠️ Always use `venv\Scripts\python.exe`, **not** the bare `python` command. Running with the system Python will cause package conflicts (see §12).
-
-**Frontend:**
-```bash
-cd frontend
-npm run dev
-```
-
-#### Option D — Docker (no local Python or Node.js required)
+#### Option A — Docker (recommended, no local Python or Node.js required)
 
 Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/) to be installed and running.
 
@@ -700,6 +661,26 @@ docker compose down
 
 # Stop and wipe all data (fresh start next time)
 docker compose down -v
+```
+
+#### Option B — Manual (local Python + Node.js)
+
+**Backend:**
+```bash
+cd backend
+python -m venv venv
+venv\Scripts\pip install -r requirements.txt
+venv\Scripts\python seed_users.py        # seed demo accounts (first time only)
+venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+> ⚠️ Always use `venv\Scripts\python.exe`, **not** the bare `python` command. Running with the system Python will cause package conflicts (see §12).
+
+**Frontend:**
+```bash
+cd frontend
+npm install
+npm run dev
 ```
 
 ### URLs
@@ -1738,4 +1719,4 @@ The backend container exposes `GET /health → { "status": "ok" }`. Docker polls
 
 ---
 
-*Documentation last updated: 2026-06-22 — GetFit v1.3.0*
+*Documentation last updated: 2026-06-23 — GetFit v1.4.0*
