@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
-from typing import Optional
+from pydantic import BaseModel, field_validator
+from typing import Literal, Optional
 from datetime import datetime, timedelta, timezone
 from app.core.database import get_db
 from app.routes.auth import get_current_user
@@ -11,15 +11,20 @@ from app.services.nutrition_calculator import get_full_nutrition_plan
 
 router = APIRouter(prefix="/profile", tags=["Profile"])
 
+VALID_GOALS = {"fat_loss", "muscle_gain", "strength", "endurance"}
+VALID_FITNESS_LEVELS = {"beginner", "intermediate", "advanced"}
+VALID_ACTIVITY_LEVELS = {"sedentary", "light", "moderate", "active", "very_active"}
+VALID_GENDERS = {"male", "female"}
+
 
 class ProfileUpdate(BaseModel):
     age: Optional[int] = None
-    gender: Optional[str] = None
+    gender: Optional[Literal["male", "female"]] = None
     weight: Optional[float] = None
     height: Optional[float] = None
-    fitness_level: Optional[str] = None
-    goal: Optional[str] = None
-    activity_level: Optional[str] = None
+    fitness_level: Optional[Literal["beginner", "intermediate", "advanced"]] = None
+    goal: Optional[Literal["fat_loss", "muscle_gain", "strength", "endurance"]] = None
+    activity_level: Optional[Literal["sedentary", "light", "moderate", "active", "very_active"]] = None
     workout_frequency: Optional[int] = None
     equipment: Optional[str] = None
 

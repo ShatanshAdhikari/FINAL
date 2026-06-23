@@ -64,7 +64,7 @@ def _search_openfoodfacts(query: str) -> dict:
 
 
 @router.post("/search")
-def search_food(data: FoodSearchRequest):
+def search_food(data: FoodSearchRequest, current_user: User = Depends(get_current_user)):
     """Search food — uses Nutritionix if API keys are set, else OpenFoodFacts (free)."""
     if settings.NUTRITIONIX_APP_ID and settings.NUTRITIONIX_API_KEY:
         url = "https://trackapi.nutritionix.com/v2/natural/nutrients"
@@ -80,8 +80,11 @@ def search_food(data: FoodSearchRequest):
 
     try:
         return _search_openfoodfacts(data.query)
-    except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"Food search failed: {exc}")
+    except Exception:
+        raise HTTPException(
+            status_code=502,
+            detail="Food search is temporarily unavailable. You can still log food manually using the calorie log."
+        )
 
 
 @router.post("/log")
