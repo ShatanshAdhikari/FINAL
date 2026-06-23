@@ -1,13 +1,16 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import toast from 'react-hot-toast';
-import logo from '../assets/logo.png';
+import logoDark from '../assets/logo.png';
+import logoLight from '../assets/logo-light.png';
 
 export default function Login() {
   const [form, setForm] = useState({ username: '', password: '' });
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
+  const { theme } = useTheme();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -29,7 +32,7 @@ export default function Login() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <img src={logo} alt="GetFit" className="w-56 rounded-2xl mb-3 bg-[var(--bg-base)] p-2" />
+          <img src={theme === 'dark' ? logoDark : logoLight} alt="GetFit" className="w-56 rounded-2xl mb-3 p-2" />
           <p className="text-gray-400 text-sm">Your personal fitness companion</p>
         </div>
 
@@ -62,7 +65,7 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-orange-500 to-red-600 text-[var(--text-primary)] font-semibold py-3 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 mt-2"
+              className="w-full bg-gradient-to-r from-orange-500 to-red-600 text-white font-semibold py-3 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 mt-2"
             >
               {loading ? 'Signing in...' : 'Sign In'}
             </button>

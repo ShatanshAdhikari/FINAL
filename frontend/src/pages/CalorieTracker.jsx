@@ -161,7 +161,7 @@ export default function CalorieTracker() {
             <div key={m.name} className="bg-[var(--bg-nested)] rounded-xl p-3">
               <div className="flex justify-between text-xs mb-2">
                 <span className="text-gray-400">{m.name}</span>
-                <span className="text-gray-300">{Math.round(m.consumed)}g / {Math.round(m.goal)}g</span>
+                <span className="text-[var(--text-primary)]">{Math.round(m.consumed)}g / {Math.round(m.goal)}g</span>
               </div>
               <div className="w-full bg-[var(--bg-muted)] rounded-full h-1.5">
                 <div
