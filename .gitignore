@@ -37,6 +37,9 @@ backend/notebooks/.ipynb_checkpoints/
 *.sw?
 .DS_Store
 
+# ML datasets — large, downloaded locally (see backend/app/ml/data/README.md)
+backend/app/ml/data/
+
 # Logs
 *.log
 logs/
