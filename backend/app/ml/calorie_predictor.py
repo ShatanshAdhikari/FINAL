@@ -137,10 +137,34 @@ def _generate_synthetic_data(n: int = 1000):
     return X, calories
 
 
+def real_data_available() -> bool:
+    """True if a usable real dataset is present (any supported layout).
+
+    Mirrors the detection in _get_training_data so callers like the admin
+    /ml/status endpoint report the same source the model actually trains on.
+    A lone calories.csv counts only when it is itself a merged file.
+    """
+    def _is_merged(path: str) -> bool:
+        FEATURE_COLS = {"Gender", "Age", "Height", "Weight",
+                        "Duration", "Heart_Rate", "Body_Temp", "Calories"}
+        try:
+            header = pd.read_csv(path, nrows=0)
+            return FEATURE_COLS.issubset(set(_resolve_columns(header).columns))
+        except Exception:
+            return False
+
+    if os.path.exists(MERGED_CSV):
+        return True
+    if os.path.exists(EXERCISE_CSV) and os.path.exists(CALORIES_CSV):
+        return True
+    if os.path.exists(CALORIES_CSV) and _is_merged(CALORIES_CSV):
+        return True
+    return False
+
+
 def _get_training_data():
     """Return (X, y) from real data if available, else synthetic."""
-    has_two_files = os.path.exists(EXERCISE_CSV) and os.path.exists(CALORIES_CSV)
-    if os.path.exists(MERGED_CSV) or has_two_files or os.path.exists(CALORIES_CSV):
+    if real_data_available():
         try:
             X, y = _load_real_data()
             print(f"[calorie_predictor] Loaded real dataset — {len(y)} samples.")

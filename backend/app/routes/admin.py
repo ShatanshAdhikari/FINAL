@@ -182,15 +182,15 @@ def retrain_model(admin: User = Depends(require_admin)):
 def ml_status(admin: User = Depends(require_admin)):
     """Check whether the real Kaggle dataset is present."""
     import os
-    from app.ml.calorie_predictor import EXERCISE_CSV, CALORIES_CSV, MERGED_CSV, MODEL_PATH
-    two_files = os.path.exists(EXERCISE_CSV) and os.path.exists(CALORIES_CSV)
-    merged = os.path.exists(MERGED_CSV)
+    from app.ml.calorie_predictor import (
+        EXERCISE_CSV, CALORIES_CSV, MERGED_CSV, MODEL_PATH, real_data_available,
+    )
     return {
         "exercise_csv_found": os.path.exists(EXERCISE_CSV),
         "calories_csv_found": os.path.exists(CALORIES_CSV),
-        "merged_csv_found": merged,
+        "merged_csv_found": os.path.exists(MERGED_CSV),
         "model_trained": os.path.exists(MODEL_PATH),
-        "using_real_data": two_files or merged,
+        "using_real_data": real_data_available(),
     }
 
 
