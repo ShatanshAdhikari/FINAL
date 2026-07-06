@@ -2,7 +2,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import {
-  LayoutDashboard, Dumbbell, Apple, Footprints, User, LogOut, Shield, Sun, Moon
+  LayoutDashboard, Dumbbell, Apple, Footprints, User, LogOut, Shield
 } from 'lucide-react';
 import logoDark from '../assets/logo.png';
 import logoLight from '../assets/logo-light.png';
@@ -17,7 +17,7 @@ const navItems = [
 
 export default function Layout() {
   const { user, logout } = useAuth();
-  const { theme, toggle } = useTheme();
+  const { theme } = useTheme();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -83,14 +83,6 @@ export default function Layout() {
             </div>
           </div>
           <button
-            onClick={toggle}
-            aria-label="Toggle theme"
-            className="w-full flex items-center gap-3 px-4 py-2 rounded-xl text-sm text-gray-400 hover:bg-[var(--bg-muted)] hover:text-[var(--text-primary)] transition-all mb-1"
-          >
-            {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
-            {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
-          </button>
-          <button
             onClick={handleLogout}
             className="w-full flex items-center gap-3 px-4 py-2 rounded-xl text-sm text-gray-400 hover:bg-red-500/10 hover:text-red-400 transition-all"
           >
@@ -138,14 +130,6 @@ export default function Layout() {
             </NavLink>
           )}
 
-          <button
-            onClick={toggle}
-            aria-label="Toggle theme"
-            className="flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl text-[10px] font-medium text-gray-500 hover:text-[var(--text-primary)] transition-all"
-          >
-            {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
-            <span>{theme === 'dark' ? 'Light' : 'Dark'}</span>
-          </button>
           <button
             onClick={handleLogout}
             className="flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl text-[10px] font-medium text-gray-500 hover:text-red-400 transition-all"

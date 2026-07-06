@@ -29,6 +29,16 @@ services:
       - "5173:5173"
     environment:
       VITE_API_TARGET: "http://backend:8000"
+      # Windows bind mounts don't emit native FS events into the Linux container,
+      # so Vite's watcher must poll to see edits and trigger HMR.
+      CHOKIDAR_USEPOLLING: "true"
+    volumes:
+      # Live-sync local source into the container so Vite HMR reflects edits
+      # without a rebuild.
+      - ./frontend:/app
+      # Anonymous volume keeps the container's Linux-built node_modules — without
+      # this, the host mount above would hide/overwrite it and break the dev server.
+      - /app/node_modules
     depends_on:
       backend:
         condition: service_healthy

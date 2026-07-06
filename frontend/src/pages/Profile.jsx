@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
-import { User, Save } from 'lucide-react';
+import { User, Save, Sun, Moon } from 'lucide-react';
 
 const goals = ['fat_loss', 'muscle_gain', 'strength', 'endurance'];
 const levels = ['beginner', 'intermediate', 'advanced'];
@@ -10,6 +11,7 @@ const activityLevels = ['sedentary', 'light', 'moderate', 'active', 'very_active
 
 export default function Profile() {
   const { user, refreshUser } = useAuth();
+  const { theme, toggle } = useTheme();
   const [form, setForm] = useState({
     age: '', gender: 'male', weight: '', height: '',
     fitness_level: '', goal: '', activity_level: '',
@@ -76,6 +78,29 @@ export default function Profile() {
               Admin
             </span>
           )}
+        </div>
+      </div>
+
+      <div className="bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] p-6">
+        <h2 className="text-[var(--text-primary)] font-semibold mb-4">Appearance</h2>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            {theme === 'dark'
+              ? <Moon size={18} className="text-orange-400" />
+              : <Sun size={18} className="text-orange-400" />}
+            <div>
+              <div className="text-[var(--text-primary)] text-sm font-medium">Theme</div>
+              <div className="text-gray-400 text-xs">{theme === 'dark' ? 'Dark mode' : 'Light mode'}</div>
+            </div>
+          </div>
+          <button
+            onClick={toggle}
+            aria-label="Toggle theme"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium bg-[var(--bg-muted)] text-[var(--text-primary)] hover:opacity-90 transition-opacity"
+          >
+            {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+            Switch to {theme === 'dark' ? 'Light' : 'Dark'}
+          </button>
         </div>
       </div>
 
