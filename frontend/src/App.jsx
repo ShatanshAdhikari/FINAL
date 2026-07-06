@@ -28,7 +28,13 @@ function AdminRoute({ children }) {
 
 function PublicRoute({ children }) {
   const { user } = useAuth();
-  if (user) return <Navigate to="/dashboard" />;
+  if (user) {
+    // A freshly-registered user has no profile yet — send them to onboarding,
+    // not the dashboard. This also makes the destination agree with Register's
+    // own navigate('/onboarding'), avoiding a redirect race that skipped onboarding.
+    const profileComplete = user.goal && user.fitness_level && user.weight;
+    return <Navigate to={profileComplete ? '/dashboard' : '/onboarding'} />;
+  }
   return children;
 }
 
