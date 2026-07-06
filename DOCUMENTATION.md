@@ -698,14 +698,13 @@ Run `venv\Scripts\python seed_users.py` to populate these accounts:
 
 | Role | Username | Email | Password |
 |------|----------|-------|----------|
-| Super-Admin | `superadmin` | superadmin@getfit.com | `SuperAdmin@123` |
-| Admin | `admin_alex` | admin1@getfit.com | `Admin@1234` |
-| Admin | `admin_sara` | admin2@getfit.com | `Admin@1234` |
-| User | `john_doe` | john.doe@example.com | `User@1234` |
-| User | `jane_smith` | jane.smith@example.com | `User@1234` |
-| User | `mike_chen` | mike.chen@example.com | `User@1234` |
-| User | `priya_patel` | priya.patel@example.com | `User@1234` |
-| User | `carlos_garcia` | carlos.garcia@example.com | `User@1234` |
+| Super-Admin | `shatansh` | shatansh@gmail.com | `SuperAdmin@123` |
+| Admin | `prerana` | prerana@gmail.com | `Admin@1234` |
+| User | `maria` | maria@gmail.com | `User@1234` |
+| User | `neha` | neha@gmail.com | `User@1234` |
+| User | `animesh` | animesh@gmail.com | `User@1234` |
+| User | `biplov` | biplov@gmail.com | `User@1234` |
+| User | `binav` | binav@gmail.com | `User@1234` |
 
 ### Environment Variables
 
