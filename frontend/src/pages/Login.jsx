@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import toast from 'react-hot-toast';
@@ -7,7 +8,14 @@ import logoDark from '../assets/logo.png';
 import logoLight from '../assets/logo-light.png';
 
 export default function Login() {
-  const [form, setForm] = useState({ username: '', password: '' });
+  const [form, setForm] = useState({
+    username: localStorage.getItem('rememberedUsername') || '',
+    password: '',
+  });
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(
+    () => !!localStorage.getItem('rememberedUsername')
+  );
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const { theme } = useTheme();
@@ -18,6 +26,11 @@ export default function Login() {
     setLoading(true);
     try {
       await login(form.username, form.password);
+      if (rememberMe) {
+        localStorage.setItem('rememberedUsername', form.username);
+      } else {
+        localStorage.removeItem('rememberedUsername');
+      }
       toast.success('Welcome back! 💪');
       navigate('/dashboard');
     } catch (err) {
@@ -53,15 +66,34 @@ export default function Login() {
             </div>
             <div>
               <label className="block text-sm text-gray-400 mb-1">Password</label>
-              <input
-                type="password"
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-                className="w-full bg-[var(--bg-nested)] border border-[var(--border-input)] rounded-xl px-4 py-3 text-[var(--text-primary)] text-sm focus:outline-none focus:border-orange-500 transition-colors"
-                placeholder="Enter your password"
-                required
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  className="w-full bg-[var(--bg-nested)] border border-[var(--border-input)] rounded-xl px-4 py-3 pr-12 text-[var(--text-primary)] text-sm focus:outline-none focus:border-orange-500 transition-colors"
+                  placeholder="Enter your password"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  className="absolute inset-y-0 right-0 flex items-center pr-4 text-gray-400 hover:text-[var(--text-primary)] transition-colors"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </div>
+            <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="w-4 h-4 rounded border-[var(--border-input)] bg-[var(--bg-nested)] accent-orange-500"
+              />
+              Remember me
+            </label>
             <button
               type="submit"
               disabled={loading}
