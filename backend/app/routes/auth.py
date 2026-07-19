@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from slowapi import Limiter
@@ -20,6 +22,8 @@ from app.core.email import send_set_password_email
 from app.models.user import User
 
 SET_PASSWORD_PURPOSE = "set_password"
+
+logger = logging.getLogger("getfit.auth")
 
 
 def _build_set_password_link(token: str) -> str:
@@ -90,10 +94,20 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
 
 
 def _send_confirmation(user: User) -> bool:
-    """Mint a set-password token and email the confirmation link."""
-    token = create_action_token(user.id, SET_PASSWORD_PURPOSE)
-    link = _build_set_password_link(token)
-    return send_set_password_email(user.email, user.username, link)
+    """
+    Mint a set-password token and email the confirmation link.
+
+    Never raises: a mail-server failure must not fail account creation. Returns
+    True if the email was actually sent, False if it was skipped or errored
+    (the user can request a fresh link via /auth/resend-verification).
+    """
+    try:
+        token = create_action_token(user.id, SET_PASSWORD_PURPOSE)
+        link = _build_set_password_link(token)
+        return send_set_password_email(user.email, user.username, link)
+    except Exception:
+        logger.exception("Failed to send confirmation email to %s", user.email)
+        return False
 
 
 @router.post("/register", status_code=201)
