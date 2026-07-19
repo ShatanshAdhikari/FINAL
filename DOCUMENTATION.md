@@ -35,6 +35,7 @@
 15. [API Request & Response Examples](#15-api-request--response-examples)
 16. [Testing](#16-testing)
 17. [Docker Setup](#17-docker-setup)
+18. [Production Deployment (Cloud Hosting)](#18-production-deployment-cloud-hosting)
 
 ---
 
@@ -1718,4 +1719,157 @@ The backend container exposes `GET /health → { "status": "ok" }`. Docker polls
 
 ---
 
-*Documentation last updated: 2026-06-23 — GetFit v1.4.0*
+## 18. Production Deployment (Cloud Hosting)
+
+The app is deployed as a **split-hosting** architecture across four free-tier
+cloud services. Each runs 24/7 — you do **not** open any dashboard to *use* the
+app, only to change configuration.
+
+### 18.1 Architecture
+
+```
+Browser
+   │  https
+   ▼
+Vercel  ──────────────►  Render  ──────────────►  Neon
+(React static frontend)   (FastAPI backend)        (Postgres database)
+                              │
+                              ▼
+                          Resend  (transactional email over HTTPS)
+```
+
+| Layer | Platform | What it hosts | Plan |
+|-------|----------|---------------|------|
+| Frontend | **Vercel** | Built React/Vite static bundle, served over CDN | Hobby (free) |
+| Backend | **Render** | FastAPI app in Docker (`backend/Dockerfile`) | Web Service (free) |
+| Database | **Neon** | Managed Postgres, persistent | Free |
+| Email | **Resend** | Set-password / confirmation emails via HTTPS API | Free |
+
+### 18.2 Live URLs
+
+| Service | URL |
+|---------|-----|
+| **App (open this to use GetFit)** | https://final-ten-ruddy-12.vercel.app |
+| Backend API | https://getfit-api-jv59.onrender.com |
+| API health check | https://getfit-api-jv59.onrender.com/health |
+| API Swagger docs | https://getfit-api-jv59.onrender.com/docs |
+
+> **Using the app:** open only the Vercel URL. The other services run
+> automatically behind it — their dashboards are for configuration/logs only.
+
+### 18.3 Local vs Production — key differences
+
+| Concern | Local (Docker Compose) | Production |
+|---------|------------------------|------------|
+| Database | **SQLite** (`getfit.db` in the `getfit_data` volume) | **Neon Postgres** |
+| Frontend | Vite dev server + `/api` proxy | Static build on Vercel CDN |
+| API base URL | `/api` (proxied) | `VITE_API_BASE` = Render URL (baked into bundle at build) |
+| Email backend | SMTP (Gmail) or Resend | **Resend only** (Render blocks outbound SMTP) |
+
+`docker-compose.yml` overrides `DATABASE_URL` to SQLite, so local development
+never touches the production Neon database.
+
+### 18.4 Why Resend instead of SMTP in production
+
+Render's free tier **blocks outbound SMTP** (ports 25/465/587) to prevent spam,
+so Gmail SMTP silently fails in production. `app/core/email.py` therefore selects
+a backend at runtime:
+
+```
+RESEND_API_KEY set   → send via Resend HTTPS API   (production)
+else SMTP creds set  → send via Gmail SMTP          (local dev)
+else                 → log the email to console     (no config)
+```
+
+Both send paths catch their own errors and return `False` instead of raising, so
+an email-delivery failure can never turn account registration into a `500`.
+
+> **Resend onboarding limitation:** with the default sender
+> `onboarding@resend.dev`, Resend only delivers to the Resend account's own
+> signup email. To email arbitrary users, verify a domain in Resend and set
+> `RESEND_FROM=GetFit <noreply@yourdomain>`.
+
+### 18.5 Environment variables by platform
+
+**Render** (backend — set in dashboard → Environment; see `render.yaml`):
+
+| Variable | Value / source |
+|----------|----------------|
+| `DATABASE_URL` | Neon connection string (`postgresql://…?sslmode=require`) |
+| `SECRET_KEY` | JWT signing key |
+| `FRONTEND_URL` | `https://final-ten-ruddy-12.vercel.app` (CORS + email links) |
+| `RESEND_API_KEY` | Resend API key (`re_…`) |
+| `RESEND_FROM` | `GetFit <onboarding@resend.dev>` |
+| `GOOGLE_CLIENT_ID` | OAuth Web-application Client ID |
+| `SMTP_*` | optional (unused in prod — SMTP blocked) |
+| `USDA_API_KEY` | USDA FoodData Central key |
+| `PORT` | **auto-set by Render** — do not add |
+
+**Vercel** (frontend — Settings → Environment Variables, **Production**):
+
+| Variable | Value |
+|----------|-------|
+| `VITE_API_BASE` | `https://getfit-api-jv59.onrender.com` |
+| `VITE_GOOGLE_CLIENT_ID` | same Client ID as backend |
+
+> `VITE_*` vars are **baked into the bundle at build time** — after changing one,
+> you must **Redeploy** on Vercel (a running deployment won't pick it up).
+
+### 18.6 Google SSO configuration
+
+Google Sign-In uses the ID-token flow (no client secret required). In the Google
+Cloud Console → **APIs & Services → Credentials**, the OAuth **Web application**
+client must list these **Authorized JavaScript origins** (origin only — no path,
+no trailing slash):
+
+```
+https://final-ten-ruddy-12.vercel.app
+http://localhost:5173
+```
+
+Leave *Authorized redirect URIs* empty. The same Client ID goes in both
+`GOOGLE_CLIENT_ID` (Render) and `VITE_GOOGLE_CLIENT_ID` (Vercel). While the OAuth
+consent screen is in **testing** mode, only accounts added under **Test users**
+can sign in. A `401 invalid_client — no registered origin` error means the
+serving origin is missing from the authorized-origins list (allow a few minutes
+for changes to propagate).
+
+### 18.7 Deploy & redeploy flow
+
+Both platforms deploy from the GitHub repo (`main` branch):
+
+- **Backend (Render):** auto-deploys on every push to `main`, and on any
+  environment-variable change.
+- **Frontend (Vercel):** auto-deploys on push. After changing a `VITE_*` env var
+  **without** a code push, trigger **Deployments → ⋯ → Redeploy** so the new
+  value is rebuilt into the bundle.
+
+The backend `Dockerfile` runs `seed_users.py` on every start; it is **idempotent**
+(upserts by email/username), so demo accounts are created once and never
+duplicated across redeploys.
+
+### 18.8 Free-tier cold start
+
+Render's free web service **sleeps after ~15 minutes of inactivity**. The first
+request after it sleeps wakes the container and takes **~50 seconds**; every
+request after that is fast. This is expected free-tier behaviour, not a bug —
+before a live demo, open the app URL a minute early to warm the backend.
+
+### 18.9 Inspecting the production database
+
+Connect to Neon from a SQL client (e.g. DBeaver) with a **PostgreSQL** connection:
+
+| Field | Value |
+|-------|-------|
+| Host | `ep-sparkling-fire-ava9f3a0.c-11.us-east-1.aws.neon.tech` |
+| Port | `5432` |
+| Database | `neondb` |
+| User | `neondb_owner` |
+| SSL mode | **`require`** (Neon rejects non-SSL) |
+
+Tables live under **Schemas → public**. This is live production data — read
+freely, but edit/delete with care.
+
+---
+
+*Documentation last updated: 2026-07-19 — GetFit v1.5.0 (cloud deployment)*
