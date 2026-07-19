@@ -2,7 +2,7 @@
 Nutrition Calculator - BMR, TDEE, and Macronutrient Distribution
 Based on Mifflin-St Jeor equation as described in the GetFit documentation (Section 3.2.4)
 """
-from typing import Dict
+from typing import Dict, List, Optional
 
 
 ACTIVITY_MULTIPLIERS = {
@@ -91,6 +91,66 @@ def calculate_macros(
     }
 
 
+def _apply_condition_adjustments(macros: Dict, conditions: Optional[str]) -> List[str]:
+    """
+    Adjust macros in place for certain diseases and return advisory notes.
+    Kept conservative and clearly advisory — not medical advice.
+    """
+    notes: List[str] = []
+    if not conditions:
+        return notes
+    tokens = [c.strip().lower() for c in conditions.split(",") if c.strip()]
+
+    def has(*keys: str) -> bool:
+        return any(any(k in t for k in keys) for t in tokens)
+
+    if has("diabet"):
+        # Shift ~15% of carb grams toward protein/fat to reduce glycemic load.
+        shift = round(macros["carbs_g"] * 0.15, 1)
+        macros["carbs_g"] = round(macros["carbs_g"] - shift, 1)
+        macros["protein_g"] = round(macros["protein_g"] + shift * 0.5, 1)
+        macros["fat_g"] = round(macros["fat_g"] + (shift * 0.5) * (4 / 9), 1)
+        notes.append("Carbohydrates were reduced to help manage blood sugar (diabetes reported).")
+    if has("pcos", "insulin resist", "prediabet", "fatty liver"):
+        # Same insulin-sensitivity rationale as diabetes — trim refined carbs.
+        shift = round(macros["carbs_g"] * 0.10, 1)
+        macros["carbs_g"] = round(macros["carbs_g"] - shift, 1)
+        macros["protein_g"] = round(macros["protein_g"] + shift * 0.5, 1)
+        notes.append("Refined carbohydrates were trimmed to support insulin sensitivity.")
+    if has("hypertension", "blood pressure"):
+        notes.append("Keep sodium low (<1500mg/day) — hypertension reported.")
+    if has("cholesterol", "heart", "cardiac", "atheroscler"):
+        # Nudge fat down / carbs up to favor a heart-healthy split.
+        shift = round(macros["fat_g"] * 0.15, 1)
+        macros["fat_g"] = round(macros["fat_g"] - shift, 1)
+        macros["carbs_g"] = round(macros["carbs_g"] + shift * (9 / 4), 1)
+        notes.append("Saturated fat was reduced — favor unsaturated fats (heart/cholesterol reported).")
+    if has("kidney", "renal"):
+        # Cap protein for renal safety and rebalance the calories into carbs.
+        if macros["protein_g"] > 0:
+            cut = round(macros["protein_g"] * 0.20, 1)
+            macros["protein_g"] = round(macros["protein_g"] - cut, 1)
+            macros["carbs_g"] = round(macros["carbs_g"] + cut, 1)
+        notes.append("Protein was lowered for kidney safety — consult your doctor before high-protein diets.")
+    if has("gout", "uric"):
+        notes.append("Limit high-purine foods (red meat, shellfish, alcohol) — gout reported.")
+    if has("celiac", "gluten"):
+        notes.append("Choose gluten-free carbohydrate sources (celiac/gluten sensitivity reported).")
+    if has("lactose", "dairy"):
+        notes.append("Use lactose-free or plant-based dairy for your protein sources.")
+    if has("gerd", "acid reflux", "ulcer"):
+        notes.append("Prefer smaller, low-acid, low-spice meals (GERD/reflux reported).")
+    if has("ibs", "crohn", "colitis", "ibd"):
+        notes.append("Favor gentle, low-FODMAP fiber sources (digestive condition reported).")
+    if has("anemia", "iron def"):
+        notes.append("Prioritize iron-rich foods with vitamin C to aid absorption (anemia reported).")
+    if has("thyroid", "hypothyroid"):
+        notes.append("Metabolism may run lower with thyroid conditions — monitor weight trends and adjust.")
+    if has("osteoporosis", "osteopenia"):
+        notes.append("Ensure adequate calcium and vitamin D (bone-density condition reported).")
+    return notes
+
+
 def get_full_nutrition_plan(
     gender: str,
     age: int,
@@ -99,12 +159,20 @@ def get_full_nutrition_plan(
     activity_level: str,
     goal: str,
     fitness_level: str,
+    conditions: Optional[str] = None,
+    allergies: Optional[str] = None,
 ) -> Dict:
     """Return complete nutrition plan including BMR, TDEE, calorie goal, and macros."""
     bmr = calculate_bmr(gender, weight, height, age)
     tdee = calculate_tdee(bmr, activity_level)
     calorie_goal = calculate_calorie_goal(tdee, goal)
     macros = calculate_macros(calorie_goal, weight, fitness_level, goal)
+
+    notes = _apply_condition_adjustments(macros, conditions)
+    if allergies and allergies.strip():
+        allergen_list = [a.strip() for a in allergies.split(",") if a.strip()]
+        if allergen_list:
+            notes.append("Avoid foods containing: " + ", ".join(allergen_list) + ".")
 
     return {
         "bmr": round(bmr, 0),
@@ -113,6 +181,7 @@ def get_full_nutrition_plan(
         "macros": macros,
         "goal": goal,
         "activity_level": activity_level,
+        "notes": notes,
     }
 
 

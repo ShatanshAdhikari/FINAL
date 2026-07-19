@@ -7,11 +7,14 @@ import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line,
 } from 'recharts';
-import { Flame, Footprints, Dumbbell, Target, TrendingUp, Apple, Scale } from 'lucide-react';
+import { Flame, Footprints, Dumbbell, Target, TrendingUp, Apple, Scale, Download, Calendar } from 'lucide-react';
 import { CardSkeleton, StatSkeleton } from '../components/Skeleton';
+import { generateProgressPdf } from '../utils/progressPdf';
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const isoDaysAgo = (n) => new Date(Date.now() - n * 86400000).toISOString().slice(0, 10);
+
   const [nutritionPlan, setNutritionPlan] = useState(null);
   const [todayCalories, setTodayCalories] = useState(null);
   const [stepData, setStepData] = useState(null);
@@ -21,31 +24,102 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
+  // On-page chart date range (defaults: last 30 days)
+  const [chartFrom, setChartFrom] = useState(isoDaysAgo(29));
+  const [chartTo, setChartTo] = useState(isoDaysAgo(0));
+  const [chartsLoading, setChartsLoading] = useState(false);
+
+  const applyChartPreset = (days) => {
+    setChartFrom(days === 'all' ? isoDaysAgo(730) : isoDaysAgo(days - 1));
+    setChartTo(isoDaysAgo(0));
+  };
+
+  // Core dashboard data (range-independent)
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchCore = async () => {
       try {
-        const [plan, today, steps, history, weights] = await Promise.allSettled([
+        const [plan, today, steps] = await Promise.allSettled([
           api.get('/profile/nutrition-plan'),
           api.get('/nutrition/logs/today'),
           api.get('/steps/today'),
-          api.get('/nutrition/logs/history?days=7'),
-          api.get('/profile/weight-history?days=90'),
         ]);
         if (plan.status === 'fulfilled') setNutritionPlan(plan.value.data);
         if (today.status === 'fulfilled') setTodayCalories(today.value.data);
         if (steps.status === 'fulfilled') setStepData(steps.value.data);
-        if (history.status === 'fulfilled') setCalorieHistory(history.value.data);
-        if (weights.status === 'fulfilled') setWeightHistory(weights.value.data);
-
-        const anySuccess = [plan, today, steps, history, weights].some(r => r.status === 'fulfilled');
-        if (!anySuccess) setError(true);
+        if (![plan, today, steps].some(r => r.status === 'fulfilled')) setError(true);
       } catch {
         setError(true);
       }
       setLoading(false);
     };
-    void fetchData();
+    void fetchCore();
   }, []);
+
+  // Chart history — refetches whenever the on-page range changes
+  useEffect(() => {
+    if (chartFrom > chartTo) return;
+    let cancelled = false;
+    const load = async () => {
+      setChartsLoading(true);
+      const fromMs = new Date(`${chartFrom}T00:00:00Z`).getTime();
+      const days = Math.min(1000, Math.max(1, Math.round((Date.now() - fromMs) / 86400000) + 2));
+      const [hist, weights] = await Promise.allSettled([
+        api.get(`/nutrition/logs/history?days=${days}`),
+        api.get(`/profile/weight-history?days=${days}`),
+      ]);
+      if (cancelled) return;
+      const inRange = (d) => d.date >= chartFrom && d.date <= chartTo;
+      if (hist.status === 'fulfilled') setCalorieHistory(hist.value.data.filter(inRange));
+      if (weights.status === 'fulfilled') setWeightHistory(weights.value.data.filter(inRange));
+      setChartsLoading(false);
+    };
+    void load();
+    return () => { cancelled = true; };
+  }, [chartFrom, chartTo]);
+
+  const [downloading, setDownloading] = useState(false);
+  const [showReport, setShowReport] = useState(false);
+  const [rangeFrom, setRangeFrom] = useState(isoDaysAgo(29));
+  const [rangeTo, setRangeTo] = useState(isoDaysAgo(0));
+
+  const applyPreset = (days) => {
+    // days === 'all' spans up to ~2 years back; presets always end today.
+    setRangeFrom(days === 'all' ? isoDaysAgo(730) : isoDaysAgo(days - 1));
+    setRangeTo(isoDaysAgo(0));
+  };
+
+  const downloadReport = async (from, to) => {
+    if (from > to) {
+      toast.error('Start date must be on or before the end date');
+      return;
+    }
+    setDownloading(true);
+    try {
+      // Fetch a window wide enough to cover the chosen start, then filter to [from, to].
+      const fromMs = new Date(`${from}T00:00:00Z`).getTime();
+      const days = Math.min(1000, Math.max(1, Math.round((Date.now() - fromMs) / 86400000) + 2));
+      const [hist, weights] = await Promise.allSettled([
+        api.get(`/nutrition/logs/history?days=${days}`),
+        api.get(`/profile/weight-history?days=${days}`),
+      ]);
+      const inRange = (d) => d.date >= from && d.date <= to;
+      const cal = (hist.status === 'fulfilled' ? hist.value.data : calorieHistory).filter(inRange);
+      const wt = (weights.status === 'fulfilled' ? weights.value.data : weightHistory).filter(inRange);
+
+      generateProgressPdf({
+        user, nutritionPlan, todayCalories, stepData,
+        calorieHistory: cal, weightHistory: wt,
+        range: { from, to },
+      });
+      toast.success('Progress report downloaded 📄');
+      setShowReport(false);
+    } catch (e) {
+      console.error(e);
+      toast.error('Could not generate the report');
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   const logWeight = async () => {
     const w = parseFloat(weightInput);
@@ -54,8 +128,11 @@ export default function Dashboard() {
       await api.post('/profile/weight', { weight: w });
       toast.success('Weight logged!');
       setWeightInput('');
-      const res = await api.get('/profile/weight-history?days=90');
-      setWeightHistory(res.data);
+      // Refetch within the active chart range so a new entry shows immediately.
+      const fromMs = new Date(`${chartFrom}T00:00:00Z`).getTime();
+      const days = Math.min(1000, Math.max(1, Math.round((Date.now() - fromMs) / 86400000) + 2));
+      const res = await api.get(`/profile/weight-history?days=${days}`);
+      setWeightHistory(res.data.filter(d => d.date >= chartFrom && d.date <= chartTo));
     } catch {
       toast.error('Failed to log weight');
     }
@@ -108,14 +185,88 @@ export default function Dashboard() {
             {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
           </p>
         </div>
-        {!isProfileComplete && (
-          <Link
-            to="/onboarding"
-            className="bg-orange-500/20 border border-orange-500/30 text-orange-400 px-4 py-2 rounded-xl text-sm font-medium hover:bg-orange-500/30 transition-colors"
-          >
-            Complete Profile →
-          </Link>
-        )}
+        <div className="flex items-center gap-2">
+          {!isProfileComplete && (
+            <Link
+              to="/onboarding"
+              className="bg-orange-500/20 border border-orange-500/30 text-orange-400 px-4 py-2 rounded-xl text-sm font-medium hover:bg-orange-500/30 transition-colors"
+            >
+              Complete Profile →
+            </Link>
+          )}
+          <div className="relative">
+            <button
+              onClick={() => setShowReport(v => !v)}
+              disabled={downloading}
+              className="flex items-center gap-2 bg-[var(--bg-surface)] border border-[var(--border)] text-[var(--text-primary)] px-4 py-2 rounded-xl text-sm font-medium hover:border-orange-500/50 transition-colors disabled:opacity-50"
+            >
+              <Download size={16} className="text-orange-400" />
+              {downloading ? 'Preparing…' : 'Download Progress'}
+            </button>
+
+            {showReport && (
+              <>
+                {/* click-away backdrop */}
+                <div className="fixed inset-0 z-10" onClick={() => setShowReport(false)} />
+                <div className="absolute right-0 mt-2 w-72 z-20 bg-[var(--bg-surface)] border border-[var(--border)] rounded-2xl shadow-xl p-4 space-y-3">
+                  <div className="flex items-center gap-2 text-[var(--text-primary)] font-semibold text-sm">
+                    <Calendar size={16} className="text-orange-400" /> Report period
+                  </div>
+
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      { label: '7d', days: 7 },
+                      { label: '30d', days: 30 },
+                      { label: '90d', days: 90 },
+                      { label: 'All', days: 'all' },
+                    ].map(p => (
+                      <button
+                        key={p.label}
+                        onClick={() => applyPreset(p.days)}
+                        className="px-2.5 py-1 rounded-lg text-xs font-medium bg-[var(--bg-nested)] border border-[var(--border-input)] text-[var(--text-primary)] hover:border-orange-500/50 transition-colors"
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="block text-xs text-gray-400">
+                      From
+                      <input
+                        type="date"
+                        value={rangeFrom}
+                        max={rangeTo}
+                        onChange={e => setRangeFrom(e.target.value)}
+                        className="mt-1 w-full bg-[var(--bg-nested)] border border-[var(--border-input)] rounded-lg px-3 py-1.5 text-[var(--text-primary)] text-sm focus:outline-none focus:border-orange-500"
+                      />
+                    </label>
+                    <label className="block text-xs text-gray-400">
+                      To
+                      <input
+                        type="date"
+                        value={rangeTo}
+                        min={rangeFrom}
+                        max={isoDaysAgo(0)}
+                        onChange={e => setRangeTo(e.target.value)}
+                        className="mt-1 w-full bg-[var(--bg-nested)] border border-[var(--border-input)] rounded-lg px-3 py-1.5 text-[var(--text-primary)] text-sm focus:outline-none focus:border-orange-500"
+                      />
+                    </label>
+                  </div>
+
+                  <button
+                    onClick={() => downloadReport(rangeFrom, rangeTo)}
+                    disabled={downloading}
+                    className="w-full flex items-center justify-center gap-2 bg-orange-500 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-orange-600 transition-colors disabled:opacity-50"
+                  >
+                    <Download size={15} />
+                    {downloading ? 'Preparing…' : 'Download PDF'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -149,11 +300,48 @@ export default function Dashboard() {
         />
       </div>
 
+      <div className="flex flex-wrap items-center gap-2 bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] px-4 py-3">
+        <span className="flex items-center gap-1.5 text-sm text-[var(--text-primary)] font-medium mr-1">
+          <Calendar size={15} className="text-orange-400" /> Chart range
+        </span>
+        {[
+          { label: '7d', days: 7 },
+          { label: '30d', days: 30 },
+          { label: '90d', days: 90 },
+          { label: 'All', days: 'all' },
+        ].map(p => (
+          <button
+            key={p.label}
+            onClick={() => applyChartPreset(p.days)}
+            className="px-2.5 py-1 rounded-lg text-xs font-medium bg-[var(--bg-nested)] border border-[var(--border-input)] text-[var(--text-primary)] hover:border-orange-500/50 transition-colors"
+          >
+            {p.label}
+          </button>
+        ))}
+        <input
+          type="date"
+          value={chartFrom}
+          max={chartTo}
+          onChange={e => setChartFrom(e.target.value)}
+          className="bg-[var(--bg-nested)] border border-[var(--border-input)] rounded-lg px-2 py-1 text-[var(--text-primary)] text-xs focus:outline-none focus:border-orange-500"
+        />
+        <span className="text-gray-500 text-xs">→</span>
+        <input
+          type="date"
+          value={chartTo}
+          min={chartFrom}
+          max={isoDaysAgo(0)}
+          onChange={e => setChartTo(e.target.value)}
+          className="bg-[var(--bg-nested)] border border-[var(--border-input)] rounded-lg px-2 py-1 text-[var(--text-primary)] text-xs focus:outline-none focus:border-orange-500"
+        />
+        {chartsLoading && <span className="text-xs text-gray-400 ml-auto">updating…</span>}
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-2 bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] p-6">
           <div className="flex items-center gap-2 mb-4">
             <TrendingUp size={18} className="text-orange-400" />
-            <h2 className="text-[var(--text-primary)] font-semibold">7-Day Calorie Intake</h2>
+            <h2 className="text-[var(--text-primary)] font-semibold">Calorie Intake</h2>
           </div>
           {calorieHistory.length > 0 ? (
             <ResponsiveContainer width="100%" height={200}>

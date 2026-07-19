@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING, Optional, List
 from sqlalchemy.orm import relationship, Mapped, mapped_column
-from sqlalchemy import String, Integer, Float, Boolean, DateTime
+from sqlalchemy import String, Integer, Float, Boolean, DateTime, Text
 from datetime import datetime, timezone
 from app.core.database import Base
 
@@ -19,7 +19,12 @@ class User(Base):
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
     is_super_admin: Mapped[bool] = mapped_column(Boolean, default=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    is_verified: Mapped[bool] = mapped_column(Boolean, default=False)  # email confirmed / password set
     created_at: Mapped[Optional[datetime]] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    # OAuth (Google SSO) — null for password accounts
+    oauth_provider: Mapped[Optional[str]] = mapped_column(String, nullable=True)   # e.g. "google"
+    google_sub: Mapped[Optional[str]] = mapped_column(String, nullable=True, index=True)
 
     # Profile data
     age: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
@@ -31,6 +36,10 @@ class User(Base):
     activity_level: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     workout_frequency: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)  # days per week
     equipment: Mapped[Optional[str]] = mapped_column(String, nullable=True)     # comma-separated
+
+    # Health data (comma-separated) — feeds workout & nutrition personalization
+    allergies: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    diseases: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     # Relationships
     calorie_logs: Mapped[List["CalorieLog"]] = relationship("CalorieLog", back_populates="user", cascade="all, delete")

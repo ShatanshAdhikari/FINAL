@@ -3,7 +3,8 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
-import { User, Save, Sun, Moon } from 'lucide-react';
+import { User, Save, Sun, Moon, HeartPulse } from 'lucide-react';
+import HealthFields from '../components/HealthFields';
 
 const goals = ['fat_loss', 'muscle_gain', 'strength', 'endurance'];
 const levels = ['beginner', 'intermediate', 'advanced'];
@@ -16,6 +17,7 @@ export default function Profile() {
     age: '', gender: 'male', weight: '', height: '',
     fitness_level: '', goal: '', activity_level: '',
     workout_frequency: 3, equipment: '',
+    allergies: '', diseases: '',
   });
   const [loading, setLoading] = useState(false);
   const [nutritionPlan, setNutritionPlan] = useState(null);
@@ -32,6 +34,8 @@ export default function Profile() {
         activity_level: user.activity_level || '',
         workout_frequency: user.workout_frequency || 3,
         equipment: user.equipment || '',
+        allergies: user.allergies || '',
+        diseases: user.diseases || '',
       });
     }
     void api.get('/profile/nutrition-plan').then(r => setNutritionPlan(r.data)).catch(() => {});
@@ -136,6 +140,13 @@ export default function Profile() {
       </div>
 
       <div className="bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] p-6">
+        <h2 className="text-[var(--text-primary)] font-semibold mb-4 flex items-center gap-2">
+          <HeartPulse size={18} className="text-orange-400" /> Health & Dietary
+        </h2>
+        <HealthFields diseases={form.diseases} allergies={form.allergies} onChange={update} />
+      </div>
+
+      <div className="bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] p-6">
         <h2 className="text-[var(--text-primary)] font-semibold mb-4">Fitness Settings</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
@@ -198,6 +209,15 @@ export default function Profile() {
               </div>
             ))}
           </div>
+          {nutritionPlan.notes?.length > 0 && (
+            <ul className="mt-4 space-y-1.5">
+              {nutritionPlan.notes.map((note, i) => (
+                <li key={i} className="text-xs text-amber-400/90 flex gap-2">
+                  <span>⚠️</span><span>{note}</span>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
     </div>

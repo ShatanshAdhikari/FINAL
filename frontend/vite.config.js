@@ -3,6 +3,16 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
+// Origin of the backend API, used to scope the PWA runtime cache.
+// Falls back to the local dev backend when VITE_API_BASE is unset.
+const apiOrigin = (() => {
+  try {
+    return new URL(process.env.VITE_API_BASE || 'http://localhost:8000').origin
+  } catch {
+    return 'http://localhost:8000'
+  }
+})()
+
 export default defineConfig({
   plugins: [
     react(),
@@ -33,8 +43,8 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,svg,png,ico}'],
         runtimeCaching: [
           {
-            // Cache API responses for 10 minutes
-            urlPattern: /^http:\/\/localhost:8000\/.*/i,
+            // Cache API responses for 10 minutes (backend origin only)
+            urlPattern: ({ url }) => url.origin === apiOrigin,
             handler: 'NetworkFirst',
             options: {
               cacheName: 'api-cache',

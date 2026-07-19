@@ -36,18 +36,34 @@ export function AuthProvider({ children }) {
     const res = await api.post('/auth/login', form, {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     });
-    localStorage.setItem('token', res.data.access_token);
-    localStorage.setItem('user', JSON.stringify(res.data.user));
-    setUser(res.data.user);
+    return applySession(res.data);
+  };
+
+  // Persist a login response ({access_token, user}) and set the session.
+  const applySession = (data) => {
+    localStorage.setItem('token', data.access_token);
+    localStorage.setItem('user', JSON.stringify(data.user));
+    setUser(data.user);
+    return data;
+  };
+
+  // New flow: register only creates an unverified account and triggers the
+  // confirmation email. No session is established until the password is set.
+  const register = async (email, username) => {
+    const res = await api.post('/auth/register', { email, username });
     return res.data;
   };
 
-  const register = async (email, username, password) => {
-    const res = await api.post('/auth/register', { email, username, password });
-    localStorage.setItem('token', res.data.access_token);
-    localStorage.setItem('user', JSON.stringify(res.data.user));
-    setUser(res.data.user);
-    return res.data;
+  // Consume the emailed set-password token → sets password, verifies, logs in.
+  const setPassword = async (token, password) => {
+    const res = await api.post('/auth/set-password', { token, password });
+    return applySession(res.data);
+  };
+
+  // Exchange a Google ID token (credential) for our own session.
+  const googleLogin = async (credential) => {
+    const res = await api.post('/auth/google', { credential });
+    return applySession(res.data);
   };
 
   const logout = () => {
@@ -71,7 +87,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, refreshUser }}>
+    <AuthContext.Provider value={{ user, login, register, setPassword, googleLogin, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );
