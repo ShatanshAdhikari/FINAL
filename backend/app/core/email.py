@@ -1,40 +1,63 @@
 """
-Email delivery via Gmail SMTP (STARTTLS).
+Email delivery. Two backends, chosen at runtime:
 
-If SMTP credentials are not configured (SMTP_USER / SMTP_PASS blank), the email
-is not sent — instead the message (including any link) is logged to the console.
-This keeps the signup flow fully testable in dev before real Gmail credentials
-are pasted into .env.
+  1. Resend (HTTPS API) — used when RESEND_API_KEY is set. Preferred in
+     production: hosts such as Render block outbound SMTP ports, but HTTPS
+     (port 443) always works.
+  2. Gmail SMTP (STARTTLS) — fallback for local dev when only SMTP creds are
+     set. SMTP_PASS must be a 16-char Gmail *App Password* (not the account
+     password) with 2-Step Verification enabled.
 
-Gmail note: SMTP_PASS must be a 16-character *App Password*
-(myaccount.google.com → Security → App passwords), not the account password,
-and 2-Step Verification must be enabled on the sending account.
+If neither is configured the message (including any link) is logged to the
+console so the signup flow stays testable in dev.
 """
 import logging
 import smtplib
 from email.message import EmailMessage
 
+import requests
+
 from app.core.config import settings
 
 logger = logging.getLogger("getfit.email")
 
+RESEND_ENDPOINT = "https://api.resend.com/emails"
 
-def send_email(to: str, subject: str, html: str, text: str | None = None) -> bool:
-    """
-    Send an HTML email. Returns True if actually sent via SMTP, False if it was
-    only logged (dev fallback). Raises only on an unexpected SMTP error when
-    credentials *are* configured.
-    """
-    sender = settings.SMTP_FROM or settings.SMTP_USER
 
-    if not settings.SMTP_USER or not settings.SMTP_PASS:
-        logger.warning(
-            "[EMAIL:dev] SMTP not configured — not sending. "
-            "To: %s | Subject: %s\n%s",
-            to, subject, text or html,
+def _send_via_resend(to: str, subject: str, html: str, text: str | None) -> bool:
+    """Send through the Resend HTTP API. Returns False (never raises) on error."""
+    try:
+        resp = requests.post(
+            RESEND_ENDPOINT,
+            headers={"Authorization": f"Bearer {settings.RESEND_API_KEY}"},
+            json={
+                "from": settings.RESEND_FROM,
+                "to": [to],
+                "subject": subject,
+                "html": html,
+                "text": text or "Please view this email in an HTML-capable client.",
+            },
+            timeout=20,
+        )
+    except requests.RequestException:
+        logger.exception("[EMAIL] Resend request failed for %s", to)
+        return False
+
+    if resp.status_code >= 400:
+        # Resend returns a JSON error body — surface it for debugging.
+        logger.error(
+            "[EMAIL] Resend rejected send to %s (HTTP %s): %s",
+            to, resp.status_code, resp.text[:500],
         )
         return False
 
+    logger.info("[EMAIL] Sent '%s' to %s via Resend", subject, to)
+    return True
+
+
+def _send_via_smtp(to: str, subject: str, html: str, text: str | None) -> bool:
+    """Send through Gmail SMTP. Returns False (never raises) on error."""
+    sender = settings.SMTP_FROM or settings.SMTP_USER
     msg = EmailMessage()
     msg["Subject"] = subject
     msg["From"] = sender
@@ -42,13 +65,38 @@ def send_email(to: str, subject: str, html: str, text: str | None = None) -> boo
     msg.set_content(text or "Please view this email in an HTML-capable client.")
     msg.add_alternative(html, subtype="html")
 
-    with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=20) as server:
-        server.starttls()
-        server.login(settings.SMTP_USER, settings.SMTP_PASS)
-        server.send_message(msg)
+    try:
+        with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=20) as server:
+            server.starttls()
+            server.login(settings.SMTP_USER, settings.SMTP_PASS)
+            server.send_message(msg)
+    except OSError:
+        logger.exception("[EMAIL] SMTP send failed for %s", to)
+        return False
 
-    logger.info("[EMAIL] Sent '%s' to %s", subject, to)
+    logger.info("[EMAIL] Sent '%s' to %s via SMTP", subject, to)
     return True
+
+
+def send_email(to: str, subject: str, html: str, text: str | None = None) -> bool:
+    """
+    Send an HTML email. Returns True if actually sent, False if it errored or
+    was only logged (dev fallback). Never raises.
+
+    Backend priority: Resend (HTTPS) → Gmail SMTP → dev console log.
+    """
+    if settings.RESEND_API_KEY:
+        return _send_via_resend(to, subject, html, text)
+
+    if settings.SMTP_USER and settings.SMTP_PASS:
+        return _send_via_smtp(to, subject, html, text)
+
+    logger.warning(
+        "[EMAIL:dev] No email backend configured — not sending. "
+        "To: %s | Subject: %s\n%s",
+        to, subject, text or html,
+    )
+    return False
 
 
 def send_set_password_email(to: str, username: str, link: str) -> bool:

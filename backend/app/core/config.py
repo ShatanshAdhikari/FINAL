@@ -54,6 +54,15 @@ class Settings(BaseSettings):
     SMTP_FROM: str = ""          # defaults to SMTP_USER if blank
     EMAIL_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # set-password link validity (24h)
 
+    # Resend (HTTP email API) — preferred in prod. Hosts like Render block
+    # outbound SMTP, so we send over HTTPS instead. If RESEND_API_KEY is set it
+    # takes priority over SMTP. Get a key at https://resend.com.
+    # RESEND_FROM must use a verified domain to email arbitrary recipients;
+    # the default onboarding@resend.dev only delivers to your own Resend signup
+    # address (fine for a first test).
+    RESEND_API_KEY: str = ""
+    RESEND_FROM: str = "GetFit <onboarding@resend.dev>"
+
     # Google SSO — public OAuth Client ID (no secret needed for ID-token flow)
     GOOGLE_CLIENT_ID: str = ""
 
