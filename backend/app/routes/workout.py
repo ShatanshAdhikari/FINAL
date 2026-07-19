@@ -40,6 +40,7 @@ def get_workout_plan(current_user: User = Depends(get_current_user)):
         age=current_user.age or 25,
         gender=current_user.gender or "male",
         user_id=current_user.id,
+        conditions=current_user.diseases,
     )
     return plan
 

@@ -61,6 +61,20 @@ def _search_usda(query: str) -> dict:
     return {"foods": foods, "source": "USDA FoodData Central"}
 
 
+def _flag_allergens(result: dict, allergies: Optional[str]) -> dict:
+    """Annotate each returned food with an allergen warning if its name matches a user allergy."""
+    tokens = [a.strip().lower() for a in (allergies or "").split(",") if a.strip()]
+    if not tokens:
+        return result
+    for food in result.get("foods", []) or []:
+        name = str(food.get("food_name", "")).lower()
+        matched = [t for t in tokens if t and t in name]
+        if matched:
+            food["allergen_warning"] = True
+            food["matched_allergens"] = matched
+    return result
+
+
 @router.post("/search")
 def search_food(data: FoodSearchRequest, current_user: User = Depends(get_current_user)):
     """Search food — uses Nutritionix if API keys are set, else USDA FoodData Central (free)."""
@@ -74,10 +88,12 @@ def search_food(data: FoodSearchRequest, current_user: User = Depends(get_curren
         response = requests.post(url, json={"query": data.query}, headers=headers)
         if response.status_code != 200:
             raise HTTPException(status_code=502, detail="Nutritionix API error")
-        return response.json()
+        return _flag_allergens(response.json(), current_user.allergies)
 
     try:
-        return _search_usda(data.query)
+        return _flag_allergens(_search_usda(data.query), current_user.allergies)
+    except HTTPException:
+        raise
     except Exception:
         raise HTTPException(
             status_code=502,

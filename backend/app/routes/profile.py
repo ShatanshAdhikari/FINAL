@@ -27,6 +27,8 @@ class ProfileUpdate(BaseModel):
     activity_level: Optional[Literal["sedentary", "light", "moderate", "active", "very_active"]] = None
     workout_frequency: Optional[int] = Field(None, ge=1, le=7)
     equipment: Optional[str] = Field(None, max_length=200)
+    allergies: Optional[str] = Field(None, max_length=500)
+    diseases: Optional[str] = Field(None, max_length=500)
 
 
 @router.put("/")
@@ -47,6 +49,8 @@ def update_profile(data: ProfileUpdate, db: Session = Depends(get_db), current_u
         "activity_level": current_user.activity_level,
         "workout_frequency": current_user.workout_frequency,
         "equipment": current_user.equipment,
+        "allergies": current_user.allergies,
+        "diseases": current_user.diseases,
     }}
 
 
@@ -106,5 +110,7 @@ def get_nutrition_plan(current_user: User = Depends(get_current_user)):
         activity_level=current_user.activity_level or "",
         goal=current_user.goal or "",
         fitness_level=current_user.fitness_level or "",
+        conditions=current_user.diseases,
+        allergies=current_user.allergies,
     )
     return plan

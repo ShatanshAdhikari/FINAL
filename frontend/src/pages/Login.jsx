@@ -5,6 +5,7 @@ import { useTheme } from '../context/ThemeContext';
 import toast from 'react-hot-toast';
 import logoDark from '../assets/logo.png';
 import logoLight from '../assets/logo-light.png';
+import GoogleSignInButton from '../components/GoogleSignInButton';
 
 export default function Login() {
   const [form, setForm] = useState({ username: '', password: '' });
@@ -70,6 +71,14 @@ export default function Login() {
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
+
+          <div className="flex items-center gap-3 my-5">
+            <div className="flex-1 h-px bg-[var(--border)]" />
+            <span className="text-gray-500 text-xs">or</span>
+            <div className="flex-1 h-px bg-[var(--border)]" />
+          </div>
+          <GoogleSignInButton />
+
           <p className="text-center text-gray-400 text-sm mt-6">
             Don't have an account?{' '}
             <Link to="/register" className="text-orange-400 hover:text-orange-300 font-medium">

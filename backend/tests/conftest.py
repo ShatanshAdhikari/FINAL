@@ -27,6 +27,11 @@ _db_module.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=_
 from app.core.database import Base, get_db
 from app.main import app  # also runs Base.metadata.create_all(bind=engine)
 
+# Disable auth rate limiting in tests — the suite makes many /auth calls and the
+# 10/min per-IP limit would otherwise reject later registrations with 429.
+from app.routes.auth import limiter as _auth_limiter
+_auth_limiter.enabled = False
+
 # Ensure all tables exist (main.py's create_all uses our engine, but guard anyway)
 Base.metadata.create_all(bind=_test_engine)
 

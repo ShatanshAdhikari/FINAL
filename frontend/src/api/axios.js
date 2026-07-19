@@ -1,7 +1,10 @@
 import axios from 'axios';
 
+// Dev: unset → '/api', which Vite proxies to the local backend.
+// Prod (Vercel): VITE_API_BASE = full Render backend URL, e.g.
+//   https://getfit-api.onrender.com  → requests go cross-origin directly.
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: import.meta.env.VITE_API_BASE || '/api',
 });
 
 // Attach JWT token to every request

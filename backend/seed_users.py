@@ -136,6 +136,7 @@ def _upsert(db, data: dict) -> tuple[User, bool]:
     user = User(
         **user_fields,
         hashed_password=get_password_hash(data["password"]),
+        is_verified=True,   # seeded accounts already have passwords → verified
     )
     db.add(user)
     db.flush()   # get id without full commit yet
@@ -154,6 +155,20 @@ def _migrate(engine):
             conn.execute(text("ALTER TABLE users ADD COLUMN is_super_admin BOOLEAN DEFAULT 0 NOT NULL"))
             conn.commit()
             print("[migrate] Added column: users.is_super_admin")
+        if "is_verified" not in columns:
+            conn.execute(text("ALTER TABLE users ADD COLUMN is_verified BOOLEAN DEFAULT 1 NOT NULL"))
+            conn.commit()
+            print("[migrate] Added column: users.is_verified")
+        for col, ddl in [
+            ("oauth_provider", "ALTER TABLE users ADD COLUMN oauth_provider VARCHAR"),
+            ("google_sub", "ALTER TABLE users ADD COLUMN google_sub VARCHAR"),
+            ("allergies", "ALTER TABLE users ADD COLUMN allergies TEXT"),
+            ("diseases", "ALTER TABLE users ADD COLUMN diseases TEXT"),
+        ]:
+            if col not in columns:
+                conn.execute(text(ddl))
+                conn.commit()
+                print(f"[migrate] Added column: users.{col}")
 
 
 def seed():

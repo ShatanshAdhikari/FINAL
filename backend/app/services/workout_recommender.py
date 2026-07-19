@@ -4,7 +4,61 @@ As described in the GetFit project documentation (Section 3.2.2)
 """
 import random
 from datetime import date
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
+
+# Health conditions → exercise names to avoid (substring match, case-insensitive).
+# Keyed by normalized condition token so free-text like "Knee Injury" still matches.
+CONDITION_EXCLUSIONS: Dict[str, List[str]] = {
+    "knee": ["squat", "lunge", "jump", "step-up", "split squat", "leg press", "stair"],
+    "back": ["deadlift", "barbell row", "rack pull", "t-bar", "good morning", "hip thrust"],
+    "shoulder": ["overhead press", "shoulder press", "arnold press", "lateral raise",
+                 "pike push-up", "pull-up", "push-up"],
+    "wrist": ["push-up", "plank", "ab wheel", "front squat"],
+    "heart": ["hiit", "sprint", "running", "jump rope", "stair climbing", "high knees",
+              "mountain climbers", "burpee"],
+    "hypertension": ["hiit", "sprint", "deadlift", "heavy", "max"],
+    "pressure": ["hiit", "sprint", "deadlift", "heavy", "max"],   # matches "blood pressure"
+    "asthma": ["hiit", "sprint", "running (30", "stair climbing"],
+    "copd": ["hiit", "sprint", "running", "stair climbing", "burpee"],
+    "pregnancy": ["deadlift", "crunch", "sit-up", "jump", "hiit", "twist", "plank",
+                  "hanging leg", "dragon flag", "russian twist"],
+    # ── Joints / musculoskeletal ──
+    "sciatica": ["deadlift", "good morning", "leg raise", "hanging leg", "sit-up"],
+    "herniated disc": ["deadlift", "crunch", "sit-up", "good morning", "russian twist", "toe touch"],
+    "elbow": ["curl", "dip", "skull crusher", "push-up", "diamond"],
+    "neck": ["overhead press", "shoulder press", "shrug", "upright row", "bridge"],
+    "hip": ["squat", "lunge", "split squat", "jump", "leg press", "hip thrust"],
+    "ankle": ["jump", "run", "lunge", "calf raise", "sprint", "step-up", "high knees"],
+    "arthritis": ["jump", "sprint", "hiit", "running", "plyometric", "box jump", "stair climbing"],
+    "osteoporosis": ["deadlift", "heavy", "max", "jump", "sprint", "box jump", "running"],
+    # ── Metabolic / systemic ──
+    "diabetes": ["hiit", "sprint", "max"],
+    "obesity": ["jump", "sprint", "running", "box jump", "burpee", "plyometric", "high knees"],
+    "hernia": ["deadlift", "heavy squat", "crunch", "sit-up", "plank", "leg press", "hip thrust"],
+    "vertigo": ["pike push-up", "handstand", "burpee", "mountain climbers", "inversion"],
+    "epilepsy": ["hiit", "sprint", "max", "box jump"],
+}
+
+# Conditions that should cap overall intensity toward lower-impact training.
+LOW_IMPACT_CONDITIONS = {
+    "heart", "hypertension", "pressure", "asthma", "copd", "pregnancy",
+    "arthritis", "osteoporosis", "obesity", "diabetes", "epilepsy",
+}
+
+
+def _normalize_conditions(conditions: Optional[str]) -> List[str]:
+    if not conditions:
+        return []
+    return [c.strip().lower() for c in conditions.split(",") if c.strip()]
+
+
+def _excluded_terms(conditions: Optional[str]) -> List[str]:
+    terms: List[str] = []
+    for cond in _normalize_conditions(conditions):
+        for key, names in CONDITION_EXCLUSIONS.items():
+            if key in cond:
+                terms.extend(names)
+    return terms
 
 # Exercise database organized by type and difficulty
 EXERCISE_DATABASE = {
@@ -144,8 +198,13 @@ def _get_sets_reps_rest(goal: str, fitness_level: str) -> Dict:
     return configs.get(goal_key, configs["muscle_gain"]).get(level_key, configs["muscle_gain"]["beginner"])
 
 
-def _get_exercises_for_type(workout_type: str, fitness_level: str, count: int = 4) -> List[Dict]:
-    """Get exercises for a given workout type and fitness level."""
+def _get_exercises_for_type(
+    workout_type: str,
+    fitness_level: str,
+    count: int = 4,
+    excluded_terms: Optional[List[str]] = None,
+) -> List[Dict]:
+    """Get exercises for a given workout type and fitness level, filtered by health conditions."""
     level = fitness_level.lower()
     pool = []
 
@@ -161,6 +220,16 @@ def _get_exercises_for_type(workout_type: str, fitness_level: str, count: int = 
     if not pool:
         pool = EXERCISE_DATABASE.get(workout_type, {}).get("beginner", [])
 
+    # Filter out contraindicated exercises. If filtering empties the pool,
+    # fall back to the unfiltered pool so a day is never left blank.
+    if excluded_terms:
+        filtered = [
+            ex for ex in pool
+            if not any(term in ex["name"].lower() for term in excluded_terms)
+        ]
+        if filtered:
+            pool = filtered
+
     return random.sample(pool, min(count, len(pool)))
 
 
@@ -171,6 +240,7 @@ def generate_workout_plan(
     age: int = 25,
     gender: str = "male",
     user_id: int = 0,
+    conditions: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Generate a personalized weekly workout plan.
@@ -181,10 +251,17 @@ def generate_workout_plan(
         workout_frequency: days per week (1-7)
         age: user age
         gender: male / female
+        conditions: comma-separated health conditions/injuries that filter unsafe exercises
 
     Returns:
         Dict with weekly workout plan
     """
+    excluded = _excluded_terms(conditions)
+    normalized = _normalize_conditions(conditions)
+
+    def pick(wtype: str, count: int) -> List[Dict]:
+        return _get_exercises_for_type(wtype, fitness_level, count=count, excluded_terms=excluded)
+
     # Seed by user + ISO week so each user gets a unique plan that rotates weekly
     week = date.today().isocalendar()[1]
     seed_val = hash((user_id, fitness_level, goal, workout_frequency, week)) % (2 ** 32)
@@ -200,8 +277,7 @@ def generate_workout_plan(
         for day in workout_days:
             exercises = []
             for wtype in ["push", "pull", "legs", "core"]:
-                exs = _get_exercises_for_type(wtype, fitness_level, count=2)
-                for ex in exs:
+                for ex in pick(wtype, 2):
                     exercises.append({**ex, **config})
             plan[day] = {"type": "Full Body", "exercises": exercises}
 
@@ -212,19 +288,15 @@ def generate_workout_plan(
             exercises = []
             if split == "upper":
                 for wtype in ["push", "pull"]:
-                    exs = _get_exercises_for_type(wtype, fitness_level, count=3)
-                    for ex in exs:
+                    for ex in pick(wtype, 3):
                         exercises.append({**ex, **config})
-                exs = _get_exercises_for_type("core", fitness_level, count=2)
-                for ex in exs:
+                for ex in pick("core", 2):
                     exercises.append({**ex, **config})
                 plan[day] = {"type": "Upper Body", "exercises": exercises}
             else:
-                exs = _get_exercises_for_type("legs", fitness_level, count=5)
-                for ex in exs:
+                for ex in pick("legs", 5):
                     exercises.append({**ex, **config})
-                exs = _get_exercises_for_type("core", fitness_level, count=2)
-                for ex in exs:
+                for ex in pick("core", 2):
                     exercises.append({**ex, **config})
                 plan[day] = {"type": "Lower Body", "exercises": exercises}
 
@@ -234,25 +306,33 @@ def generate_workout_plan(
         for day, split in zip(workout_days, split_cycle[:workout_frequency]):
             exercises = []
             if split == "core":
-                exs = _get_exercises_for_type("core", fitness_level, count=5)
-                for ex in exs:
+                for ex in pick("core", 5):
                     exercises.append({**ex, **config})
-                exs = _get_exercises_for_type("cardio", fitness_level, count=2)
-                for ex in exs:
+                for ex in pick("cardio", 2):
                     exercises.append({**ex, **config})
                 plan[day] = {"type": "Core & Cardio", "exercises": exercises}
             else:
-                exs = _get_exercises_for_type(split, fitness_level, count=5)
-                for ex in exs:
+                for ex in pick(split, 5):
                     exercises.append({**ex, **config})
-                exs = _get_exercises_for_type("core", fitness_level, count=2)
-                for ex in exs:
+                for ex in pick("core", 2):
                     exercises.append({**ex, **config})
                 plan[day] = {"type": split.capitalize(), "exercises": exercises}
+
+    # Advisory notes so the UI can explain why the plan was adapted.
+    notes: List[str] = []
+    if excluded:
+        notes.append(
+            "Some exercises were excluded to accommodate your reported health conditions. "
+            "Consult a medical professional before starting any program."
+        )
+    if any(c for c in normalized if any(k in c for k in LOW_IMPACT_CONDITIONS)):
+        notes.append("Intensity was kept lower-impact based on your health profile.")
 
     return {
         "goal": goal,
         "fitness_level": fitness_level,
         "days_per_week": workout_frequency,
         "weekly_plan": plan,
+        "conditions_applied": normalized,
+        "notes": notes,
     }

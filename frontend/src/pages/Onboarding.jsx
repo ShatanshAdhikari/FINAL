@@ -3,8 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
+import HealthFields from '../components/HealthFields';
+import { validateNumber } from '../utils/validation';
 
-const steps = ['Personal Info', 'Fitness Goals', 'Workout Preferences'];
+const steps = ['Personal Info', 'Fitness Goals', 'Workout Preferences', 'Health'];
 
 const goals = [
   { value: 'fat_loss', label: '🔥 Fat Loss', desc: 'Burn fat and get lean' },
@@ -37,9 +39,26 @@ export default function Onboarding() {
     age: '', gender: 'male', weight: '', height: '',
     goal: '', fitness_level: '', activity_level: '',
     workout_frequency: 3, equipment: 'none',
+    allergies: '', diseases: '',
   });
+  const [errors, setErrors] = useState({ age: '', weight: '', height: '' });
 
-  const update = (key, val) => setForm(prev => ({ ...prev, [key]: val }));
+  const update = (key, val) => {
+    setForm(prev => ({ ...prev, [key]: val }));
+    if (key in errors) {
+      setErrors(prev => ({ ...prev, [key]: validateNumber(key, val) }));
+    }
+  };
+
+  const validateStep0 = () => {
+    const next = {
+      age: validateNumber('age', form.age),
+      weight: validateNumber('weight', form.weight),
+      height: validateNumber('height', form.height),
+    };
+    setErrors(next);
+    return Object.values(next).every(e => !e);
+  };
 
   const handleFinish = async () => {
     setLoading(true);
@@ -95,12 +114,13 @@ export default function Onboarding() {
                 <div>
                   <label className="block text-sm text-gray-400 mb-2">Age</label>
                   <input
-                    type="number" min="10" max="100"
+                    type="number" min="10" max="115"
                     value={form.age}
                     onChange={(e) => update('age', e.target.value)}
-                    className="w-full bg-[var(--bg-nested)] border border-[var(--border-input)] rounded-xl px-4 py-3 text-[var(--text-primary)] focus:outline-none focus:border-orange-500"
+                    className={`w-full bg-[var(--bg-nested)] border rounded-xl px-4 py-3 text-[var(--text-primary)] focus:outline-none ${errors.age ? 'border-red-500 focus:border-red-500' : 'border-[var(--border-input)] focus:border-orange-500'}`}
                     placeholder="25"
                   />
+                  {errors.age && <p className="text-red-400 text-xs mt-1">{errors.age}</p>}
                 </div>
                 <div>
                   <label className="block text-sm text-gray-400 mb-2">Gender</label>
@@ -116,22 +136,24 @@ export default function Onboarding() {
                 <div>
                   <label className="block text-sm text-gray-400 mb-2">Weight (kg)</label>
                   <input
-                    type="number" min="30" max="300" step="0.1"
+                    type="number" min="20" max="500" step="0.1"
                     value={form.weight}
                     onChange={(e) => update('weight', e.target.value)}
-                    className="w-full bg-[var(--bg-nested)] border border-[var(--border-input)] rounded-xl px-4 py-3 text-[var(--text-primary)] focus:outline-none focus:border-orange-500"
+                    className={`w-full bg-[var(--bg-nested)] border rounded-xl px-4 py-3 text-[var(--text-primary)] focus:outline-none ${errors.weight ? 'border-red-500 focus:border-red-500' : 'border-[var(--border-input)] focus:border-orange-500'}`}
                     placeholder="70"
                   />
+                  {errors.weight && <p className="text-red-400 text-xs mt-1">{errors.weight}</p>}
                 </div>
                 <div>
                   <label className="block text-sm text-gray-400 mb-2">Height (cm)</label>
                   <input
-                    type="number" min="100" max="250"
+                    type="number" min="50" max="300"
                     value={form.height}
                     onChange={(e) => update('height', e.target.value)}
-                    className="w-full bg-[var(--bg-nested)] border border-[var(--border-input)] rounded-xl px-4 py-3 text-[var(--text-primary)] focus:outline-none focus:border-orange-500"
+                    className={`w-full bg-[var(--bg-nested)] border rounded-xl px-4 py-3 text-[var(--text-primary)] focus:outline-none ${errors.height ? 'border-red-500 focus:border-red-500' : 'border-[var(--border-input)] focus:border-orange-500'}`}
                     placeholder="175"
                   />
+                  {errors.height && <p className="text-red-400 text-xs mt-1">{errors.height}</p>}
                 </div>
               </div>
             </div>
@@ -218,6 +240,14 @@ export default function Onboarding() {
             </div>
           )}
 
+          {step === 3 && (
+            <HealthFields
+              diseases={form.diseases}
+              allergies={form.allergies}
+              onChange={update}
+            />
+          )}
+
           <div className="flex gap-3 mt-8">
             {step > 0 && (
               <button
@@ -230,17 +260,19 @@ export default function Onboarding() {
             {step < steps.length - 1 ? (
               <button
                 onClick={() => {
-                  if (step === 0) {
-                    if (!form.age || !form.weight || !form.height) {
-                      toast.error('Please fill in age, weight, and height');
-                      return;
-                    }
+                  if (step === 0 && !validateStep0()) {
+                    toast.error('Please enter a valid age, weight, and height');
+                    return;
                   }
                   if (step === 1) {
                     if (!form.goal || !form.fitness_level) {
                       toast.error('Please select a goal and fitness level');
                       return;
                     }
+                  }
+                  if (step === 2 && !form.activity_level) {
+                    toast.error('Please select an activity level');
+                    return;
                   }
                   setStep(s => s + 1);
                 }}
