@@ -53,7 +53,7 @@ export function generateProgressPdf({
   if (range) {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9.5);
-    doc.text(`Reporting period:  ${fmtDate(range.from)}  →  ${fmtDate(range.to)}`, margin, 70);
+    doc.text(`Reporting period:  ${fmtDate(range.from)}  to  ${fmtDate(range.to)}`, margin, 70);
     doc.setFont('helvetica', 'normal');
   }
   y = bandH + 26;
