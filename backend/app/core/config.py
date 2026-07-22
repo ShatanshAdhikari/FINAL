@@ -63,6 +63,15 @@ class Settings(BaseSettings):
     RESEND_API_KEY: str = ""
     RESEND_FROM: str = "GetFit <onboarding@resend.dev>"
 
+    # SendGrid (HTTP email API) — also works on hosts that block SMTP. Unlike
+    # Resend it supports *single sender verification*: verify one from-address
+    # (e.g. your own Gmail) at sendgrid.com and send to arbitrary recipients
+    # with no domain to buy. Takes top priority when SENDGRID_API_KEY is set.
+    # SENDGRID_FROM accepts either "you@example.com" or "GetFit <you@example.com>"
+    # and must match a verified sender.
+    SENDGRID_API_KEY: str = ""
+    SENDGRID_FROM: str = ""
+
     # Google SSO — public OAuth Client ID (no secret needed for ID-token flow)
     GOOGLE_CLIENT_ID: str = ""
 

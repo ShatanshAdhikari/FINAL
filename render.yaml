@@ -28,6 +28,13 @@ services:
         sync: false
       - key: SMTP_FROM
         sync: false
+      # SendGrid HTTP API — the backend actually used in production. Render
+      # blocks outbound SMTP, and unlike Resend a single verified sender is
+      # enough (no domain needed). Takes priority over the SMTP_* vars above.
+      - key: SENDGRID_API_KEY  # SG.… key with Mail Send scope only
+        sync: false
+      - key: SENDGRID_FROM     # must match a verified sender, e.g. GetFit <you@gmail.com>
+        sync: false
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: USDA_API_KEY

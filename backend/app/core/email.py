@@ -1,17 +1,21 @@
 """
-Email delivery. Two backends, chosen at runtime:
+Email delivery. Three backends, chosen at runtime:
 
-  1. Resend (HTTPS API) — used when RESEND_API_KEY is set. Preferred in
-     production: hosts such as Render block outbound SMTP ports, but HTTPS
-     (port 443) always works.
-  2. Gmail SMTP (STARTTLS) — fallback for local dev when only SMTP creds are
+  1. SendGrid (HTTPS API) — used when SENDGRID_API_KEY is set. Top priority:
+     works on hosts that block SMTP (like Render) *and* supports single-sender
+     verification, so it can email arbitrary recipients without a verified
+     domain.
+  2. Resend (HTTPS API) — used when RESEND_API_KEY is set. Also HTTPS-only, but
+     needs a verified domain to reach recipients other than the account owner.
+  3. Gmail SMTP (STARTTLS) — fallback for local dev when only SMTP creds are
      set. SMTP_PASS must be a 16-char Gmail *App Password* (not the account
      password) with 2-Step Verification enabled.
 
-If neither is configured the message (including any link) is logged to the
+If none is configured the message (including any link) is logged to the
 console so the signup flow stays testable in dev.
 """
 import logging
+import re
 import smtplib
 from email.message import EmailMessage
 
@@ -22,6 +26,50 @@ from app.core.config import settings
 logger = logging.getLogger("getfit.email")
 
 RESEND_ENDPOINT = "https://api.resend.com/emails"
+SENDGRID_ENDPOINT = "https://api.sendgrid.com/v3/mail/send"
+
+
+def _parse_sender(raw: str) -> dict:
+    """Parse 'Name <email>' or bare 'email' into SendGrid's {email[, name]}."""
+    match = re.match(r"^\s*(.*?)\s*<\s*(.+?)\s*>\s*$", raw)
+    if match:
+        name, addr = match.group(1), match.group(2)
+        return {"email": addr, "name": name} if name else {"email": addr}
+    return {"email": raw.strip()}
+
+
+def _send_via_sendgrid(to: str, subject: str, html: str, text: str | None) -> bool:
+    """Send through the SendGrid HTTP API. Returns False (never raises) on error."""
+    try:
+        resp = requests.post(
+            SENDGRID_ENDPOINT,
+            headers={"Authorization": f"Bearer {settings.SENDGRID_API_KEY}"},
+            json={
+                "personalizations": [{"to": [{"email": to}]}],
+                "from": _parse_sender(settings.SENDGRID_FROM),
+                "subject": subject,
+                "content": [
+                    {"type": "text/plain",
+                     "value": text or "Please view this email in an HTML-capable client."},
+                    {"type": "text/html", "value": html},
+                ],
+            },
+            timeout=20,
+        )
+    except requests.RequestException:
+        logger.exception("[EMAIL] SendGrid request failed for %s", to)
+        return False
+
+    if resp.status_code >= 400:
+        # SendGrid returns a JSON error body — surface it for debugging.
+        logger.error(
+            "[EMAIL] SendGrid rejected send to %s (HTTP %s): %s",
+            to, resp.status_code, resp.text[:500],
+        )
+        return False
+
+    logger.info("[EMAIL] Sent '%s' to %s via SendGrid", subject, to)
+    return True
 
 
 def _send_via_resend(to: str, subject: str, html: str, text: str | None) -> bool:
@@ -83,8 +131,11 @@ def send_email(to: str, subject: str, html: str, text: str | None = None) -> boo
     Send an HTML email. Returns True if actually sent, False if it errored or
     was only logged (dev fallback). Never raises.
 
-    Backend priority: Resend (HTTPS) → Gmail SMTP → dev console log.
+    Backend priority: SendGrid (HTTPS) → Resend (HTTPS) → Gmail SMTP → dev log.
     """
+    if settings.SENDGRID_API_KEY and settings.SENDGRID_FROM:
+        return _send_via_sendgrid(to, subject, html, text)
+
     if settings.RESEND_API_KEY:
         return _send_via_resend(to, subject, html, text)
 
