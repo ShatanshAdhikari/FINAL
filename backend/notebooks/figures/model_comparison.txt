@@ -1,0 +1,10 @@
+Dataset: 15000 records, 7 features
+Split: 80/20 train/test (random_state=42), 5-fold CV on full set
+
+Model                                       R2       MAE      RMSE             CV R2           Coefs
+----------------------------------------------------------------------------------------------------
+Linear Regression                       0.9673     8.442    11.489      0.9672 +/-0.0008             7/7
+Polynomial Regression (deg 3)           1.0000     0.254     0.293      1.0000 +/-0.0000         119/119
+Polynomial Ridge (L2, alpha=0.01)       1.0000     0.254     0.293      1.0000 +/-0.0000         119/119
+Polynomial Lasso (L1, alpha=0.01)       1.0000     0.260     0.305      1.0000 +/-0.0000          41/119
+Random Forest (100 trees)               0.9982     1.717     2.683      0.9980 +/-0.0001               -

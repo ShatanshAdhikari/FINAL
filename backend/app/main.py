@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
-from sqlalchemy import text
+from sqlalchemy import inspect, text
 from app.core.database import engine, Base
 from app.core.config import settings
 import app.models  # ensure models are registered
@@ -39,6 +39,16 @@ if engine.dialect.name == "sqlite":
             conn.execute(text("ALTER TABLE users ADD COLUMN allergies TEXT"))
         if "diseases" not in user_cols:
             conn.execute(text("ALTER TABLE users ADD COLUMN diseases TEXT"))
+        conn.commit()
+
+# password_changed_at backs single-use password-reset links. Unlike the block
+# above this runs on every dialect: an already-deployed Postgres database is not
+# recreated by create_all(), so it needs the column added in place too.
+with engine.connect() as conn:
+    user_cols = {c["name"] for c in inspect(engine).get_columns("users")}
+    if "password_changed_at" not in user_cols:
+        col_type = "DATETIME" if engine.dialect.name == "sqlite" else "TIMESTAMP"
+        conn.execute(text(f"ALTER TABLE users ADD COLUMN password_changed_at {col_type}"))
         conn.commit()
 
 app = FastAPI(

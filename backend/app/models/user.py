@@ -21,6 +21,9 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False)  # email confirmed / password set
     created_at: Mapped[Optional[datetime]] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+    # Bumped on every password change. Reset links embed this value, so a link
+    # stops working as soon as the password moves — making them single-use.
+    password_changed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
     # OAuth (Google SSO) — null for password accounts
     oauth_provider: Mapped[Optional[str]] = mapped_column(String, nullable=True)   # e.g. "google"

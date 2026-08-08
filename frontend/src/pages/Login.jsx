@@ -86,15 +86,20 @@ export default function Login() {
                 </button>
               </div>
             </div>
-            <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-                className="w-4 h-4 rounded border-[var(--border-input)] bg-[var(--bg-nested)] accent-orange-500"
-              />
-              Remember me
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="w-4 h-4 rounded border-[var(--border-input)] bg-[var(--bg-nested)] accent-orange-500"
+                />
+                Remember me
+              </label>
+              <Link to="/forgot-password" className="text-sm text-orange-400 hover:text-orange-300 font-medium">
+                Forgot password?
+              </Link>
+            </div>
             <button
               type="submit"
               disabled={loading}

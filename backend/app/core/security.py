@@ -56,25 +56,45 @@ def decode_token(token: str) -> Optional[dict]:
         return None
 
 
-def create_action_token(user_id: int, purpose: str, minutes: Optional[int] = None) -> str:
+def create_action_token(
+    user_id: int,
+    purpose: str,
+    minutes: Optional[int] = None,
+    extra: Optional[dict] = None,
+) -> str:
     """
     Signed, short-lived token for a specific out-of-band action (e.g. setting a
     password from an emailed link). The `purpose` claim prevents a token minted
     for one action — or a login JWT — from being accepted for another.
+
+    `extra` adds further claims (e.g. the password-reset flow's single-use
+    stamp); it cannot override sub/purpose/exp.
     """
     expire = datetime.utcnow() + timedelta(
         minutes=minutes if minutes is not None else settings.EMAIL_TOKEN_EXPIRE_MINUTES
     )
-    to_encode = {"sub": str(user_id), "purpose": purpose, "exp": expire}
+    to_encode = dict(extra or {})
+    to_encode.update({"sub": str(user_id), "purpose": purpose, "exp": expire})
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 
-def verify_action_token(token: str, purpose: str) -> Optional[int]:
-    """Return the user id if the token is valid AND matches `purpose`, else None."""
+def verify_action_token_claims(token: str, purpose: str) -> Optional[dict]:
+    """
+    Return the full payload if the token is valid AND matches `purpose`, else
+    None. Use this when the caller needs claims beyond `sub` (see
+    verify_action_token for the common case).
+    """
     payload = decode_token(token)
     if not payload or payload.get("purpose") != purpose:
         return None
     try:
-        return int(payload.get("sub"))
+        int(payload.get("sub"))
     except (TypeError, ValueError):
         return None
+    return payload
+
+
+def verify_action_token(token: str, purpose: str) -> Optional[int]:
+    """Return the user id if the token is valid AND matches `purpose`, else None."""
+    payload = verify_action_token_claims(token, purpose)
+    return int(payload["sub"]) if payload else None
