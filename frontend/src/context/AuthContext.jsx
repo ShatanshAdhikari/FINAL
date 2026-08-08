@@ -60,6 +60,19 @@ export function AuthProvider({ children }) {
     return applySession(res.data);
   };
 
+  // Ask for a reset link. Resolves the same way for unknown emails — the
+  // backend deliberately gives no signal about whether the account exists.
+  const forgotPassword = async (email) => {
+    const res = await api.post('/auth/forgot-password', { email });
+    return res.data;
+  };
+
+  // Consume the emailed reset token → sets the new password and logs in.
+  const resetPassword = async (token, password) => {
+    const res = await api.post('/auth/reset-password', { token, password });
+    return applySession(res.data);
+  };
+
   // Exchange a Google ID token (credential) for our own session.
   const googleLogin = async (credential) => {
     const res = await api.post('/auth/google', { credential });
@@ -87,7 +100,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, setPassword, googleLogin, logout, refreshUser }}>
+    <AuthContext.Provider value={{ user, login, register, setPassword, forgotPassword, resetPassword, googleLogin, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

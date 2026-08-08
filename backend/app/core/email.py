@@ -181,3 +181,40 @@ def send_set_password_email(to: str, username: str, link: str) -> bool:
         f"This link expires in 24 hours. If you didn't sign up, ignore this email."
     )
     return send_email(to, subject, html, text)
+
+
+def send_password_reset_email(to: str, username: str, link: str, expires_minutes: int) -> bool:
+    """Send the forgot-password reset link."""
+    subject = "Reset your GetFit password"
+    validity = (
+        f"{expires_minutes // 60} hour(s)" if expires_minutes >= 60 else f"{expires_minutes} minutes"
+    )
+    html = f"""\
+<div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:auto;
+            border:1px solid #eee;border-radius:12px;padding:32px">
+  <h2 style="color:#16a34a;margin-top:0">Reset your password</h2>
+  <p>Hi {username}, we got a request to reset the password on your GetFit
+     account. Click the button below to choose a new one.</p>
+  <p style="text-align:center;margin:28px 0">
+    <a href="{link}"
+       style="background:#16a34a;color:#fff;text-decoration:none;
+              padding:12px 28px;border-radius:8px;font-weight:bold;display:inline-block">
+      Reset my password
+    </a>
+  </p>
+  <p style="color:#666;font-size:13px">
+    Or paste this link into your browser:<br>
+    <a href="{link}">{link}</a>
+  </p>
+  <p style="color:#999;font-size:12px;margin-top:24px">
+    This link expires in {validity} and can only be used once. If you didn't ask
+    for a reset you can ignore this email — your password stays unchanged.
+  </p>
+</div>"""
+    text = (
+        f"Hi {username},\n\n"
+        f"Reset your GetFit password here:\n{link}\n\n"
+        f"This link expires in {validity} and can only be used once. "
+        f"If you didn't ask for a reset, ignore this email."
+    )
+    return send_email(to, subject, html, text)
